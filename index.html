@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 餐厅地图同步工具</title>
+    <!-- Leaflet 地图 CSS -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #map { height: 500px; width: 100%; border-radius: 12px; }
+        .tab-active { border-bottom: 3px solid #3b82f6; font-weight: bold; color: #3b82f6; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+<div id="app" class="max-w-4xl mx-auto p-4">
+    <!-- 头部 -->
+    <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm">
+        <h1 class="text-xl font-black text-gray-800">📍 地点管理系统</h1>
+        <div class="flex gap-4">
+            <button onclick="switchTab('map')" id="btn-map" class="pb-2 tab-active text-sm">地图视图</button>
+            <button onclick="switchTab('unidentified')" id="btn-todo" class="pb-2 text-sm">待分类 (<span id="todo-count">0</span>)</button>
+        </div>
+    </div>
+
+    <!-- 地图部分 -->
+    <div id="map-container" class="block">
+        <div id="map" class="shadow-inner border-2 border-white"></div>
+    </div>
+
+    <!-- 待分类部分 -->
+    <div id="todo-container" class="hidden space-y-4">
+        <div id="todo-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- 动态生成卡片 -->
+        </div>
+    </div>
+</div>
+
+<!-- 编辑模态框 (2026 Genmoji 支持) -->
+<div id="modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-[1000]">
+    <div class="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl">
+        <h3 class="text-lg font-bold mb-4">编辑地点详情</h3>
+        <input id="edit-id" type="hidden">
+        <div class="space-y-3">
+            <input id="edit-cat" type="text" placeholder="输入类别 (如：日料)" class="w-full border p-3 rounded-xl outline-none focus:ring-2 ring-blue-500">
+            <input id="edit-emoji" type="text" placeholder="选择 Emoji 或输入 Genmoji 描述" class="w-full border p-3 rounded-xl">
+            <select id="edit-rate" class="w-full border p-3 rounded-xl">
+                <option value="5">⭐⭐⭐⭐⭐ (推荐)</option>
+                <option value="3">⭐⭐⭐ (一般)</option>
+                <option value="1">⭐ (不推荐)</option>
+            </select>
+            <button onclick="saveChanges()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold hover:bg-blue-700 transition">保存并更新表格</button>
+            <button onclick="closeModal()" class="w-full text-gray-400 text-sm py-2">取消</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com"></script>
+<script>
+    // 替换为你的 SheetDB API 链接
+    const API_URL = 'https://sheetdb.io'; 
+    let allData = [];
+    let map, markers = [];
+
+    // 初始化地图
+    function initMap() {
+        map = L.map('map').setView([31.23, 121.47], 12); // 默认坐标
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    }
+
+    // 从 Google Sheets 获取数据
+    async function fetchData() {
+        try {
+            const res = await fetch(API_URL);
+            allData = await res.json();
+            render();
+        } catch (e) { console.error("API 连接失败"); }
+    }
+
+    function render() {
+        const todoList = document.getElementById('todo-list');
+        const todoCount = document.getElementById('todo-count');
+        todoList.innerHTML = '';
+        
+        // 清除旧 Marker
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+
+        let count = 0;
+        allData.forEach(item => {
+            if (!item.category) {
+                // 渲染待分类卡片
+                count++;
+                todoList.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-orange-400">
+                        <p class="font-bold">${item.name}</p>
+                        <p class="text-xs text-gray-500 mb-3">${item.address}</p>
+                        <button onclick="openModal('${item.id}')" class="text-xs bg-orange-100 text-orange-600 px-3 py-1 rounded-full">去分类</button>
+                    </div>`;
+            } else {
+                // 渲染地图标记
+                const marker = L.marker([item.lat, item.lng]).addTo(map)
+                    .bindPopup(`<b>${item.emoji} ${item.name}</b><br>${item.category}<br><button onclick="openModal('${item.id}')" style="color:blue">编辑</button>`);
+                markers.push(marker);
+            }
+        });
+        todoCount.innerText = count;
+    }
+
+    function openModal(id) {
+        const item = allData.find(i => i.id == id);
+        document.getElementById('edit-id').value = id;
+        document.getElementById('edit-cat').value = item.category || '';
+        document.getElementById('edit-emoji').value = item.emoji || '🍴';
+        document.getElementById('modal').classList.remove('hidden');
+    }
+
+    async function saveChanges() {
+        const id = document.getElementById('edit-id').value;
+        const updates = {
+            category: document.getElementById('edit-cat').value,
+            emoji: document.getElementById('edit-emoji').value,
+            rating: document.getElementById('edit-rate').value
+        };
+
+        // 模拟 API 更新 (实际应使用 fetch PATCH 方法)
+        // await fetch(`${API_URL}/id/${id}`, { method: 'PATCH', body: JSON.stringify({data: updates}) });
+        
+        allData = allData.map(i => i.id == id ? {...i, ...updates} : i);
+        closeModal();
+        render();
+        alert("已同步至 Google Sheets！");
+    }
+
+    function switchTab(tab) {
+        document.getElementById('map-container').className = tab === 'map' ? 'block' : 'hidden';
+        document.getElementById('todo-container').className = tab === 'unidentified' ? 'block' : 'hidden';
+        document.getElementById('btn-map').className = tab === 'map' ? 'pb-2 tab-active text-sm' : 'pb-2 text-sm';
+        document.getElementById('btn-todo').className = tab === 'unidentified' ? 'pb-2 tab-active text-sm' : 'pb-2 text-sm';
+        if(tab === 'map') setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+    window.onload = () => { initMap(); fetchData(); };
+</script>
+</body>
+</html>
