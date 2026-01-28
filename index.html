@@ -3,207 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Foodie Tracker</title>
+    <title>Foodie Mobile</title>
     <link rel="stylesheet" href="https://unpkg.com" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { -webkit-tap-highlight-color: transparent; }
-        #map { height: 100%; width: 100%; position: absolute; top: 0; bottom: 0; z-index: 1; }
-        .page { display: none; height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; background: #f8fafc; }
+        #map { height: 100%; width: 100%; position: absolute; }
+        .page { display: none; height: 100vh; width: 100vw; position: fixed; background: #f8fafc; }
         .active { display: block; }
-        .bottom-nav { height: 70px; padding-bottom: env(safe-area-inset-bottom); }
-        .safe-pb { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
-        /* Hide scrollbar but keep functionality */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .bottom-nav { height: 75px; padding-bottom: env(safe-area-inset-bottom); }
+        .safe-area-pb { padding-bottom: 90px; }
+        ::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="bg-slate-50 overflow-hidden">
+<body class="bg-slate-50 overflow-hidden select-none">
 
-    <!-- Page 1: Map & Exploration -->
+    <!-- PAGE 1: MAP VIEW -->
     <div id="p-map" class="page active">
         <div id="map"></div>
         
-        <!-- Floating Filter Bar -->
-        <div class="absolute top-4 left-0 right-0 px-4 z-[1000] flex gap-2">
-            <select id="f-cat" onchange="renderMap()" class="flex-1 bg-white/90 backdrop-blur shadow-lg border-0 h-12 px-4 rounded-2xl text-sm font-bold focus:ring-2 ring-blue-500">
+        <div class="absolute top-4 left-0 right-0 px-4 z- flex gap-2">
+            <select id="f-cat" onchange="renderAll()" class="flex-1 bg-white/90 backdrop-blur shadow-lg h-12 px-4 rounded-2xl text-xs font-bold border-0">
+                <option value="">All Categories</option>
+            </select>
+            <select id="f-type" onchange="renderAll()" class="w-32 bg-white/90 backdrop-blur shadow-lg h-12 px-2 rounded-2xl text-xs font-bold border-0">
                 <option value="">All Types</option>
-            </select>
-            <select id="f-rate" onchange="renderMap()" class="w-28 bg-white/90 backdrop-blur shadow-lg border-0 h-12 px-2 rounded-2xl text-sm font-bold focus:ring-2 ring-blue-500">
-                <option value="">Rating</option>
-                <option value="5">⭐⭐⭐⭐⭐</option>
-                <option value="4">⭐⭐⭐⭐</option>
-                <option value="3">⭐⭐⭐</option>
+                <option value="went">Visited ✅</option>
+                <option value="want to go">Wishlist ⭐</option>
             </select>
         </div>
 
-        <!-- Pull-up List Preview -->
-        <div class="absolute bottom-[80px] left-0 right-0 z-[1000] px-4 pointer-events-none">
-            <div id="map-list" class="flex gap-3 overflow-x-auto no-scrollbar pointer-events-auto py-2">
-                <!-- Cards appear here -->
-            </div>
+        <div class="absolute bottom-24 left-0 right-0 z- px-4 overflow-x-auto flex gap-3 pointer-events-none">
+            <div id="map-cards" class="flex gap-3 pointer-events-auto"></div>
         </div>
     </div>
 
-    <!-- Page 2: To-Rate (Inbox Style) -->
-    <div id="p-rate" class="page overflow-y-auto no-scrollbar safe-pb">
+    <!-- PAGE 2: TO-RATE -->
+    <div id="p-rate" class="page overflow-y-auto safe-area-pb">
         <div class="p-6">
-            <h1 class="text-3xl font-black text-slate-800 mt-8 mb-2 italic tracking-tighter">UNRATED</h1>
-            <p class="text-slate-400 text-sm mb-8 font-medium">Categorize new items from your sheet</p>
-            <div id="todo-list" class="space-y-4">
-                <!-- To-rate items here -->
-            </div>
+            <h1 class="text-3xl font-black text-slate-800 mt-8 mb-6 italic tracking-tighter">UNRATED</h1>
+            <div id="todo-list" class="space-y-4"></div>
         </div>
     </div>
 
-    <!-- Bottom Mobile Navigation -->
-    <nav class="fixed bottom-0 w-full bg-white/80 backdrop-blur-md border-t border-slate-100 flex bottom-nav z-[2000]">
-        <button onclick="showPage('p-map')" id="n-map" class="flex-1 flex flex-col items-center justify-center transition-all text-blue-600">
-            <span class="text-2xl mb-1">📍</span>
-            <span class="text-[10px] font-bold uppercase tracking-widest">Explore</span>
+    <!-- BOTTOM NAV -->
+    <nav class="fixed bottom-0 w-full bg-white/80 backdrop-blur-md border-t border-slate-100 flex bottom-nav z-">
+        <button onclick="showPage('p-map')" id="n-map" class="flex-1 flex flex-col items-center justify-center text-blue-600 transition-all">
+            <span class="text-2xl mb-1">📍</span><span>Explore</span>
         </button>
-        <button onclick="showPage('p-rate')" id="n-rate" class="flex-1 flex flex-col items-center justify-center transition-all text-slate-400">
-            <span class="text-2xl mb-1">✍️</span>
-            <span class="text-[10px] font-bold uppercase tracking-widest">To-Rate</span>
+        <button onclick="showPage('p-rate')" id="n-rate" class="flex-1 flex flex-col items-center justify-center text-slate-400 transition-all">
+            <span class="text-2xl mb-1">✍️</span><span>To-Rate</span>
         </button>
     </nav>
 
-    <!-- Mobile Action Sheet (Modal) -->
-    <div id="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-end z-[3000] transition-opacity">
-        <div class="bg-white w-full rounded-t-[40px] p-8 pb-12 shadow-2xl animate-slide-up">
+    <!-- ACTION SHEET (MODAL) -->
+    <div id="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-end z-">
+        <div class="bg-white w-full rounded-t-[40px] p-8 pb-10 shadow-2xl transition-transform translate-y-0">
             <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
-            <h3 id="m-name" class="text-2xl font-black text-slate-800 mb-6"></h3>
+            <h3 id="m-name" class="text-2xl font-black text-slate-800 mb-6 truncate"></h3>
             
-            <div class="space-y-5">
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Select Category</label>
-                    <input id="m-cat" type="text" placeholder="e.g. Japanese, Cafe..." class="w-full bg-slate-50 border-0 p-4 rounded-2xl outline-none focus:ring-2 ring-blue-500 font-bold">
+            <div class="space-y-4">
+                <input type="hidden" id="m-id">
+                
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Location Flag 🇺🇸</label>
+                    <input id="m-loc" type="text" placeholder="e.g. 🇺🇸 or 🇫🇷" class="w-full bg-slate-100 border-0 p-4 rounded-2xl font-bold text-lg outline-none">
                 </div>
                 
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1">Personal Rating</label>
-                    <select id="m-rate" class="w-full bg-slate-50 border-0 p-4 rounded-2xl font-bold outline-none">
-                        <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
-                        <option value="4">⭐⭐⭐⭐ Good</option>
-                        <option value="3">⭐⭐⭐ Fair</option>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Category</label>
+                        <select id="m-cat" class="w-full bg-slate-100 border-0 p-4 rounded-2xl font-bold text-sm outline-none">
+                            <option value="Cafe">Cafe</option><option value="Japanese">Japanese</option>
+                            <option value="Italian">Italian</option><option value="Fast Food">Fast Food</option>
+                            <option value="Bar">Bar</option><option value="Chinese">Chinese</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Type</label>
+                        <select id="m-type" class="w-full bg-slate-100 border-0 p-4 rounded-2xl font-bold text-sm outline-none">
+                            <option value="went">Went</option><option value="want to go">Want to go</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Rating</label>
+                    <select id="m-rate" class="w-full bg-slate-100 border-0 p-4 rounded-2xl font-bold text-sm outline-none">
+                        <option value="5">⭐⭐⭐⭐⭐ (Excellent)</option>
+                        <option value="4">⭐⭐⭐⭐ (Good)</option>
+                        <option value="3">⭐⭐⭐ (Average)</option>
                     </select>
                 </div>
 
-                <button onclick="generateSyncLink()" class="w-full bg-blue-600 text-white p-5 rounded-2xl font-black text-lg shadow-xl shadow-blue-200 active:scale-95 transition-transform mt-4">
-                    SAVE TO SHEET
+                <button onclick="saveLocally()" class="w-full bg-blue-600 text-white p-5 rounded-3xl font-black text-lg shadow-xl shadow-blue-200 active:scale-95 transition-transform mt-4">
+                    SAVE LOCALLY
                 </button>
-                <button onclick="closeModal()" class="w-full text-slate-400 font-bold text-sm py-2">DISMISS</button>
             </div>
         </div>
     </div>
 
     <script src="https://unpkg.com"></script>
     <script>
-        // CONFIGURATION
-        const CSV_URL = 'YOUR_PUBLISHED_CSV_URL'; 
-        const FORM_BASE = 'YOUR_GOOGLE_FORM_URL_WITH_ENTRY_PLACEHOLDERS'; 
-        /* 
-           Example FORM_BASE format: 
-           https://docs.google.com
-        */
-
-        let db = [], map, markers = [], selectedItem = null;
+        // CONFIG
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pubhtml';
+        
+        let map, db = [], localData = {};
 
         async function init() {
+            localData = JSON.parse(localStorage.getItem('my_ratings') || '{}');
             map = L.map('map', { zoomControl: false }).setView([22.3, 114.1], 13);
             L.tileLayer('https://{s}://{z}/{x}/{y}{r}.png').addTo(map);
             await loadData();
         }
 
-        async function loadData() {
-            const res = await fetch(CSV_URL);
-            const text = await res.text();
-            // Handle CSV quoting
-            const rows = text.split('\n').map(r => r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g, '')));
-            const headers = rows[0];
-            
-            db = rows.slice(1).map(row => {
-                let o = {};
-                headers.forEach((h, i) => o[h] = row[i]);
-                return o;
-            }).filter(i => i.Name);
-
-            const cats = [...new Set(db.filter(i => i.Category).map(i => i.Category))];
-            document.getElementById('f-cat').innerHTML = '<option value="">All Types</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
-
-            renderMap();
-            renderTodo();
-        }
-
-        function renderMap() {
-            const cat = document.getElementById('f-cat').value;
-            const rate = document.getElementById('f-rate').value;
-            const horizontalList = document.getElementById('map-list');
-            
-            horizontalList.innerHTML = '';
-            markers.forEach(m => map.removeLayer(m));
-            markers = [];
-
-            const filtered = db.filter(i => i.Category && (!cat || i.Category === cat) && (!rate || i.Rating === rate));
-
-            filtered.forEach(i => {
-                const m = L.marker([i.Lat, i.Lng]).addTo(map).bindPopup(`<b>${i.Name}</b><br>${i.Category}`);
-                markers.push(m);
-                
-                horizontalList.innerHTML += `
-                    <div class="min-w-[200px] bg-white p-4 rounded-3xl shadow-xl border border-slate-100 mb-2">
-                        <div class="text-[10px] font-black text-blue-500 uppercase mb-1">${i.Category}</div>
-                        <div class="font-bold text-slate-800 truncate">${i.Name}</div>
-                        <div class="flex justify-between items-center mt-2">
-                            <span class="text-xs text-yellow-500 font-bold tracking-tighter">★ ${i.Rating}</span>
-                            <span class="text-[10px] text-slate-300 font-bold uppercase tracking-widest">${i.OpeningHours || ''}</span>
-                        </div>
-                    </div>`;
+        function loadData() {
+            fetch(CSV_URL).then(r => r.text()).then(text => {
+                const lines = text.split('\n').map(l => l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g, '')));
+                const headers = lines;
+                db = lines.slice(1).map(row => {
+                    let o = {};
+                    headers.forEach((h, i) => o[h] = row[i]);
+                    // Augment with local data
+                    if (localData[o.ID]) Object.assign(o, localData[o.ID]);
+                    return o;
+                }).filter(i => i.Name);
+                renderAll();
             });
         }
 
-        function renderTodo() {
-            const todo = db.filter(i => !i.Category || i.Category === "");
-            const container = document.getElementById('todo-list');
-            container.innerHTML = todo.length ? '' : '<div class="py-20 text-center text-slate-300 font-black italic">ALL CAUGHT UP!</div>';
-            
-            todo.forEach(i => {
-                container.innerHTML += `
-                    <div class="bg-white p-5 rounded-[28px] shadow-sm border border-slate-100 flex justify-between items-center active:scale-95 transition-transform" onclick="openModal('${i.ID}')">
-                        <div class="max-w-[70%]">
-                            <h3 class="font-black text-slate-800 text-lg leading-tight truncate">${i.Name}</h3>
-                            <p class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">${i.OpeningHours || 'No Hours Listed'}</p>
-                        </div>
-                        <div class="bg-blue-600 h-10 w-10 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-100">
-                            <span class="text-white text-lg">➕</span>
-                        </div>
+        function renderAll() {
+            // Renders both tabs
+            const filterType = document.getElementById('f-type').value;
+            const filterCat = document.getElementById('f-cat').value;
+            const todoList = document.getElementById('todo-list');
+            const mapCards = document.getElementById('map-cards');
+            todoList.innerHTML = '';
+            mapCards.innerHTML = '';
+            map.eachLayer(layer => { if (layer instanceof L.Marker) map.removeLayer(layer); });
+
+            db.forEach(item => {
+                if (!item.category) {
+                    // TO-RATE TAB
+                    todoList.innerHTML += `<div class="bg-white p-5 rounded-[30px] shadow-sm flex justify-between items-center active:scale-95 transition-all" onclick="openModal('${item.ID}')">
+                        <h3 class="font-black text-slate-800 text-lg leading-tight truncate">${item.Name}</h3>
+                        <div class="bg-blue-600 h-10 w-10 rounded-2xl flex items-center justify-center"><span class="text-white">➕</span></div>
                     </div>`;
+                } else {
+                    // MAP TAB (Filter logic applied)
+                    if ((!filterType || item.type === filterType) && (!filterCat || item.category === filterCat)) {
+                        L.marker([item.Lat, item.Lng]).addTo(map).bindPopup(`<b>${item.Name}</b><br>${item.category} | ${item.type}`);
+                        mapCards.innerHTML += `<div class="min-w-[240px] bg-white p-4 rounded-3xl shadow-xl">
+                            <span class="text-xl mr-2">${item.location_flag}</span><b>${item.Name}</b><br><small>${item.category} • ${item.type}</small></div>`;
+                    }
+                }
             });
         }
 
         function openModal(id) {
-            selectedItem = db.find(x => x.ID == id);
-            document.getElementById('m-name').innerText = selectedItem.Name;
-            const modal = document.getElementById('modal');
-            modal.style.display = 'flex';
-            setTimeout(() => modal.classList.add('opacity-100'), 10);
+            const item = db.find(x => x.ID == id);
+            document.getElementById('m-id').value = id;
+            document.getElementById('m-name').innerText = item.Name;
+            document.getElementById('modal').style.display = 'flex';
         }
 
-        function generateSyncLink() {
-            const cat = encodeURIComponent(document.getElementById('m-cat').value);
-            const rate = document.getElementById('m-rate').value;
-            const url = FORM_BASE.replace('ID_VAL', selectedItem.ID).replace('CAT_VAL', cat).replace('RAT_VAL', rate);
-            window.open(url, '_blank');
+        function saveLocally() {
+            const id = document.getElementById('m-id').value;
+            localData[id] = {
+                category: document.getElementById('m-cat').value,
+                type: document.getElementById('m-type').value,
+                rating: document.getElementById('m-rate').value,
+                location_flag: document.getElementById('m-loc').value
+            };
+            localStorage.setItem('my_ratings', JSON.stringify(localData));
             closeModal();
+            loadData(); // Reload all data to ensure UIs update correctly
         }
 
         function showPage(p) {
             document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
             document.getElementById(p).classList.add('active');
-            
             const isMap = p === 'p-map';
             document.getElementById('n-map').className = isMap ? 'flex-1 flex flex-col items-center justify-center text-blue-600 transition-all' : 'flex-1 flex flex-col items-center justify-center text-slate-400 transition-all';
             document.getElementById('n-rate').className = !isMap ? 'flex-1 flex flex-col items-center justify-center text-blue-600 transition-all' : 'flex-1 flex flex-col items-center justify-center text-slate-400 transition-all';
-            
             if(isMap) setTimeout(() => map.invalidateSize(), 200);
         }
 
