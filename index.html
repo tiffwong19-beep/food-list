@@ -1,210 +1,157 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 地点管理器</title>
+    <title>Restaurant Tracker</title>
     <link rel="stylesheet" href="https://unpkg.com" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        #map { height: 600px; width: 100%; z-index: 1; }
-        .tab-active { border-bottom: 3px solid #3b82f6; color: #3b82f6; font-weight: bold; }
+        #map { height: 45vh; width: 100%; }
+        .page { display: none; height: calc(100vh - 65px); overflow-y: auto; padding-bottom: 80px; }
+        .active { display: block; }
+        .nav-active { color: #2563eb; font-weight: bold; border-top: 3px solid #2563eb; }
     </style>
 </head>
 <body class="bg-gray-50">
 
-<div id="app" class="max-w-5xl mx-auto p-4">
-    <header class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-        <h1 class="text-xl font-black italic">MAPPER.2026</h1>
-        <div class="flex gap-6">
-            <button onclick="switchTab('map')" id="tab-map" class="pb-1 tab-active transition-all">地图视图</button>
-            <button onclick="switchTab('todo')" id="tab-todo" class="pb-1 text-gray-400 transition-all">
-                待分类 (<span id="todo-count">0</span>)
-            </button>
+    <!-- Page 1: Map View -->
+    <div id="p-map" class="page active">
+        <div id="map"></div>
+        <div class="p-4 bg-white border-b flex gap-2 sticky top-0 z-[1000] shadow-sm text-sm">
+            <select id="f-cat" class="w-1/2 border p-2 rounded-lg" onchange="renderMap()">
+                <option value="">All Categories</option>
+            </select>
+            <select id="f-rate" class="w-1/2 border p-2 rounded-lg" onchange="renderMap()">
+                <option value="">All Ratings</option>
+                <option value="5">5 Stars</option>
+                <option value="4">4 Stars</option>
+                <option value="3">3 Stars</option>
+            </select>
         </div>
-    </header>
-
-    <!-- 地图面板 -->
-    <div id="panel-map" class="block">
-        <div id="map" class="rounded-3xl shadow-lg border-4 border-white"></div>
+        <div id="map-list" class="p-4 space-y-3"></div>
     </div>
 
-    <!-- 待办面板 -->
-    <div id="panel-todo" class="hidden">
-        <div id="todo-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- 动态卡片插入 -->
+    <!-- Page 2: To-Rate -->
+    <div id="p-rate" class="page">
+        <div class="p-6">
+            <h2 class="text-2xl font-black mb-1">To-Rate</h2>
+            <div id="todo-list" class="mt-4 space-y-4"></div>
         </div>
     </div>
-</div>
 
-<!-- 编辑模态框 -->
-<div id="modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-[1000] p-4">
-    <div class="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl scale-95 transition-transform">
-        <h3 class="text-2xl font-bold mb-2">完善地点信息</h3>
-        <p id="modal-title" class="text-gray-500 mb-6 text-sm"></p>
-        <input type="hidden" id="edit-id">
-        <div class="space-y-4">
-            <div>
-                <label class="text-xs font-bold text-gray-400 uppercase">类别</label>
-                <input id="edit-cat" type="text" placeholder="例如：咖啡厅, 露营点" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none">
-            </div>
-            <div>
-                <label class="text-xs font-bold text-gray-400 uppercase">Emoji 标签</label>
-                <input id="edit-emoji" type="text" placeholder="输入 Emoji 或 AI 描述" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none">
-            </div>
-            <div>
-                <label class="text-xs font-bold text-gray-400 uppercase">评分</label>
-                <select id="edit-rate" class="w-full border-2 border-gray-100 p-3 rounded-xl outline-none">
-                    <option value="5">⭐⭐⭐⭐⭐ 必去</option>
-                    <option value="4">⭐⭐⭐⭐ 推荐</option>
-                    <option value="3">⭐⭐⭐ 还行</option>
-                </select>
-            </div>
-            <button onclick="saveToSheet()" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition">确认更新</button>
-            <button onclick="closeModal()" class="w-full text-gray-400 py-2 hover:text-gray-600 transition">暂不处理</button>
+    <!-- Bottom Nav -->
+    <nav class="fixed bottom-0 w-full bg-white border-t flex h-16 z-[2000]">
+        <button onclick="showPage('p-map')" id="n-map" class="flex-1 flex flex-col items-center justify-center text-xs nav-active">
+            <span>🗺️</span><span>Map</span>
+        </button>
+        <button onclick="showPage('p-rate')" id="n-rate" class="flex-1 flex flex-col items-center justify-center text-xs text-gray-400">
+            <span>✍️</span><span>To-Rate</span>
+        </button>
+    </nav>
+
+    <!-- Modal Form -->
+    <div id="modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[3000] p-6">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+            <h3 id="m-name" class="text-xl font-bold mb-4"></h3>
+            <input id="m-cat" type="text" placeholder="Category" class="w-full border p-4 rounded-2xl mb-3 bg-gray-50 outline-none">
+            <select id="m-rate" class="w-full border p-4 rounded-2xl mb-6 bg-gray-50">
+                <option value="5">⭐⭐⭐⭐⭐</option>
+                <option value="4">⭐⭐⭐⭐</option>
+                <option value="3">⭐⭐⭐</option>
+            </select>
+            <button onclick="generateSyncLink()" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-bold">Open Form to Sync</button>
+            <button onclick="closeModal()" class="w-full mt-2 text-gray-400 text-sm">Cancel</button>
         </div>
     </div>
-</div>
 
-<script src="https://unpkg.com"></script>
-<script>
-    // 配置：替换为你自己的 SheetDB API URL
-    const API_URL = 'https://sheetdb.io'; 
-    
-    let map, markerGroup;
-    let storeData = [];
+    <script src="https://unpkg.com"></script>
+    <script>
+        // --- CONFIGURATION ---
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pubhtml'; 
+        const FORM_BASE = 'https://forms.gle/AtiW79wLNiQVdgiRA'; 
 
-    // 1. 初始化地图
-    function initMap() {
-        if (map) return;
-        map = L.map('map', { zoomControl: false }).setView([31.23, 121.47], 11);
-        L.tileLayer('https://{s}://{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-        markerGroup = L.layerGroup().addTo(map);
-    }
+        let db = [], map, markers = [], selectedItem = null;
 
-    // 2. 获取数据
-    async function fetchData() {
-        try {
-            const response = await fetch(API_URL);
-            storeData = await response.json();
-            renderUI();
-        } catch (err) {
-            console.error("数据加载失败:", err);
-            alert("无法读取表格数据，请检查 API URL。");
+        async function start() {
+            map = L.map('map', { zoomControl: false }).setView([22.31, 114.17], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            await load();
         }
-    }
 
-    // 3. 渲染界面
-    function renderUI() {
-        const todoList = document.getElementById('todo-list');
-        const todoCount = document.getElementById('todo-count');
-        todoList.innerHTML = '';
-        markerGroup.clearLayers();
+        async function load() {
+            const res = await fetch(CSV_URL);
+            const text = await res.text();
+            const lines = text.split('\n').map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
+            const headers = lines[0];
+            
+            db = lines.slice(1).map(row => {
+                let o = {};
+                headers.forEach((h, i) => o[h] = row[i]);
+                return o;
+            }).filter(i => i.Name);
 
-        let unidentifiedCount = 0;
+            const cats = [...new Set(db.filter(i => i.Category).map(i => i.Category))];
+            document.getElementById('f-cat').innerHTML = '<option value="">All Categories</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
 
-        storeData.forEach(item => {
-            // 如果 category 为空，放入待办
-            if (!item.category || item.category === "") {
-                unidentifiedCount++;
-                todoList.innerHTML += `
-                    <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition cursor-pointer" onclick="openEditModal('${item.id}')">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h4 class="font-bold text-gray-800">${item.name}</h4>
-                                <p class="text-xs text-gray-400 mt-1">${item.address || '暂无地址'}</p>
-                            </div>
-                            <span class="bg-orange-50 text-orange-500 text-[10px] px-2 py-1 rounded-md font-bold italic">NEW</span>
-                        </div>
-                        <div class="mt-4 flex items-center text-blue-500 text-xs font-bold">
-                            点击完善信息 →
-                        </div>
-                    </div>`;
-            } 
-            // 如果有 category 且有坐标，放入地图
-            else if (item.lat && item.lng) {
-                const marker = L.marker([parseFloat(item.lat), parseFloat(item.lng)])
-                    .bindPopup(`
-                        <div class="text-center p-2">
-                            <div class="text-2xl mb-1">${item.emoji || '📍'}</div>
-                            <div class="font-bold">${item.name}</div>
-                            <div class="text-xs text-gray-400">${item.category}</div>
-                            <div class="text-yellow-400 my-1">★ ${item.rating}</div>
-                            <button onclick="openEditModal('${item.id}')" class="text-blue-500 text-[10px] border border-blue-500 px-2 py-1 rounded-full mt-2">重新编辑</button>
-                        </div>
-                    `);
-                markerGroup.addLayer(marker);
-            }
-        });
+            renderMap();
+            renderTodo();
+        }
 
-        todoCount.innerText = unidentifiedCount;
-    }
+        function renderMap() {
+            const cat = document.getElementById('f-cat').value;
+            const rate = document.getElementById('f-rate').value;
+            const list = document.getElementById('map-list');
+            list.innerHTML = '';
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
 
-    // 4. 打开弹窗
-    window.openEditModal = function(id) {
-        const item = storeData.find(i => i.id == id);
-        document.getElementById('edit-id').value = id;
-        document.getElementById('modal-title').innerText = item.name;
-        document.getElementById('edit-cat').value = item.category || '';
-        document.getElementById('edit-emoji').value = item.emoji || '📍';
-        document.getElementById('edit-rate').value = item.rating || '5';
-        document.getElementById('modal').classList.remove('hidden');
-    }
-
-    // 5. 保存并写回 Google Sheets
-    async function saveToSheet() {
-        const id = document.getElementById('edit-id').value;
-        const payload = {
-            category: document.getElementById('edit-cat').value,
-            emoji: document.getElementById('edit-emoji').value,
-            rating: document.getElementById('edit-rate').value
-        };
-
-        // 乐观更新 UI
-        storeData = storeData.map(i => i.id == id ? {...i, ...payload} : i);
-        renderUI();
-        closeModal();
-
-        // 正式发送到 API (SheetDB PATCH 语法)
-        try {
-            const response = await fetch(`${API_URL}/id/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ data: payload })
+            db.filter(i => i.Category && (!cat || i.Category === cat) && (!rate || i.Rating === rate)).forEach(i => {
+                const m = L.marker([i.Lat, i.Lng]).addTo(map).bindPopup(`<b>${i.Name}</b><br>${i.Category}`);
+                markers.push(m);
+                list.innerHTML += `<div class="bg-white p-4 rounded-xl border mb-2"><b>${i.Name}</b><br><small>${i.Category} • ${i.Rating}★</small></div>`;
             });
-            if (response.ok) {
-                console.log("表格更新成功");
-                if(payload.category) switchTab('map');
-            }
-        } catch (err) {
-            alert("保存失败，但本地预览已更新");
         }
-    }
 
-    // 6. Tab 切换逻辑
-    window.switchTab = function(tab) {
-        const isMap = tab === 'map';
-        document.getElementById('panel-map').style.display = isMap ? 'block' : 'none';
-        document.getElementById('panel-todo').style.display = isMap ? 'none' : 'block';
-        
-        document.getElementById('tab-map').className = isMap ? 'pb-1 tab-active transition-all' : 'pb-1 text-gray-400 transition-all';
-        document.getElementById('tab-todo').className = !isMap ? 'pb-1 tab-active transition-all' : 'pb-1 text-gray-400 transition-all';
-
-        if (isMap) {
-            setTimeout(() => map.invalidateSize(), 300); // 关键：解决 Leaflet 在隐藏容器中初始化导致的显示错误
+        function renderTodo() {
+            const todo = db.filter(i => !i.Category);
+            const list = document.getElementById('todo-list');
+            list.innerHTML = todo.map(i => `
+                <div class="bg-white p-4 rounded-xl border flex justify-between items-center" onclick="openModal('${i.ID}')">
+                    <span>${i.Name}</span><span class="text-blue-500 font-bold">RATE</span>
+                </div>`).join('');
         }
-    }
 
-    function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+        function openModal(id) {
+            selectedItem = db.find(x => x.ID == id);
+            document.getElementById('m-name').innerText = selectedItem.Name;
+            document.getElementById('modal').style.display = 'flex';
+        }
 
-    // 初始化加载
-    window.onload = () => {
-        initMap();
-        fetchData();
-    };
-</script>
+        function generateSyncLink() {
+            const cat = encodeURIComponent(document.getElementById('m-cat').value);
+            const rate = document.getElementById('m-rate').value;
+            // You replace the entry IDs here based on your form pre-filled link
+            const syncUrl = FORM_BASE
+                .replace('ID_VAL', selectedItem.ID)
+                .replace('CAT_VAL', cat)
+                .replace('RAT_VAL', rate);
+            
+            window.open(syncUrl, '_blank');
+            closeModal();
+            alert("Please SUBMIT the Google Form that just opened to update the sheet.");
+        }
+
+        function showPage(p) {
+            document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+            document.getElementById(p).classList.add('active');
+            document.getElementById('n-map').className = p === 'p-map' ? 'flex-1 flex flex-col items-center justify-center text-xs nav-active' : 'flex-1 flex flex-col items-center justify-center text-xs text-gray-400';
+            document.getElementById('n-rate').className = p === 'p-rate' ? 'flex-1 flex flex-col items-center justify-center text-xs nav-active' : 'flex-1 flex flex-col items-center justify-center text-xs text-gray-400';
+            if(p === 'p-map') setTimeout(() => map.invalidateSize(), 200);
+        }
+
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+        window.onload = start;
+    </script>
 </body>
 </html>
