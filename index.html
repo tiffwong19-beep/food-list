@@ -1,221 +1,127 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bulu's Food Hunt</title>
-	<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-		@import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
-        body { font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto; background-color: #f8fafc; }
-		#map { height: 90vh; }
-		#controls { padding: 8px; font-family: sans-serif; }
-		select, input, button { margin-right: 8px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #f2f2f2; font-weight: bold; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        a { color: #1a73e8; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .loading { text-align: center; padding: 40px; font-style: italic; }
-        .error { color: red; }
-		.chiikawa-font { font-family: 'ZCOOL KuaiLe', cursive; }
-        .blue-gradient { background: linear-gradient(135deg, #a5d8ff 0%, #74c0fc 100%); }
-        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.3); }
-        .map-box { width: 100%; height: 180px; border-radius: 20px; border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
-        .modal-overlay { background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); z-index: 200; }
-        .active-tab-indicator { position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); width: 20px; height: 4px; background: #339af0; border-radius: 10px; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+        body { font-family: -apple-system, sans-serif; background-color: #f8fafc; }
+        .chiikawa-font { font-family: 'ZCOOL KuaiLe', cursive; }
+        .filter-pill { border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 12px; background: white; font-size: 14px; outline: none; }
+        .card { background: white; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #f1f5f9; }
+        .sticky-header { position: sticky; top: 0; z-index: 50; background: rgba(248, 250, 252, 0.8); backdrop-filter: blur(10px); }
     </style>
 </head>
-<body>
-  <div id="controls">
-    Category:
-    <select id="categoryFilter">
-      <option value="">All</option>
-    </select>
-    Min rating:
-    <input type="number" id="minRating" step="0.1" min="0" max="5" value="0">
-    <button id="applyFilters">Apply filters</button>
-  </div>
-  <div id="map"></div>
+<body class="p-4">
 
-  <!-- Leaflet JS -->
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin="">
-  </script>
+    <!-- Header & Filters -->
+    <div class="sticky-header pb-4">
+        <h1 class="chiikawa-font text-3xl text-blue-400 mb-4 text-center">Bulu's Food Hunt</h1>
+        <div class="grid grid-cols-2 gap-2">
+            <select id="fRegion" class="filter-pill"><option value="">All Regions</option></select>
+            <select id="fCategory" class="filter-pill"><option value="">All Categories</option></select>
+            <select id="fPricing" class="filter-pill"><option value="">All Prices</option></select>
+            <select id="fRating" class="filter-pill"><option value="">All Ratings</option></select>
+        </div>
+    </div>
 
-  <!-- Papa Parse for CSV -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <!-- Loading State -->
+    <div id="loader" class="text-center py-20 text-gray-500 italic">
+        <i class="fas fa-cookie-bite fa-spin text-3xl mb-2"></i><br>Finding yummy things...
+    </div>
 
-  <script>
-    // 1) Point this at your live CSV (Google Sheets)
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pubhtml";
+    <!-- Card Grid -->
+    <div id="cardGrid" class="grid grid-cols-1 gap-4"></div>
 
-    // 2) Extract lat/lng from Google Maps URL when needed
-    function extractLatLngFromUrl(url) {
-      if (!url) return null;
-      try {
-        const u = new URL(url);
+    <script>
 
-        // Pattern 1: .../@lat,lng,zoom...
-        const atMatch = u.href.match(/@(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/);
-        if (atMatch) {
-          return {
-            lat: parseFloat(atMatch[1]),
-            lng: parseFloat(atMatch[3])
-          };
-        }
+        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv";
+        const REAL_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv";
 
-        // Pattern 2: ...?q=lat,lng
-        const q = u.searchParams.get("q");
-        if (q) {
-          const qm = q.match(/(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)/);
-          if (qm) {
-            return {
-              lat: parseFloat(qm[1]),
-              lng: parseFloat(qm[3])
-            };
-          }
-        }
+        let allData = [];
 
-        // Pattern 3: coordinates embedded as @lat,lng without decimals
-        const atMatch2 = u.href.match(/@(-?\d+),(-?\d+)/);
-        if (atMatch2) {
-          return {
-            lat: parseFloat(atMatch2[1]),
-            lng: parseFloat(atMatch2[2])
-          };
-        }
-
-        return null;
-      } catch (e) {
-        return null;
-      }
-    }
-
-    let map;
-    let markers = [];
-    let places = [];
-
-    function initMap() {
-      map = L.map('map').setView([22.3193, 114.1694], 11); // Hong Kong center
-
-      // Simple, clean basemap
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-      }).addTo(map);
-    }
-
-    function createMarkers() {
-      // Clear existing
-      markers.forEach(m => {
-        if (map.hasLayer(m)) map.removeLayer(m);
-      });
-      markers = [];
-
-      places.forEach(p => {
-        if (p.lat == null || p.lng == null || isNaN(p.lat) || isNaN(p.lng)) return;
-
-        const marker = L.marker([p.lat, p.lng]).addTo(map);
-        marker.placeData = p;
-        marker.bindPopup(
-          `<b>${p.name}</b><br>` +
-          `Category: ${p.category ?? ""}<br>` +
-          `Rating: ${p.rating ?? ""}<br>` +
-          (p.google_maps_url
-            ? `<a href="${p.google_maps_url}" target="_blank">Open in Google Maps</a>`
-            : "")
-        );
-        markers.push(marker);
-      });
-
-      // Fit map to markers
-      if (markers.length > 0) {
-        const group = L.featureGroup(markers);
-        map.fitBounds(group.getBounds().pad(0.1));
-      }
-    }
-
-    function populateCategoryFilter() {
-      const categorySelect = document.getElementById('categoryFilter');
-      categorySelect.innerHTML = '<option value="">All</option>';
-
-      const categories = [...new Set(places.map(p => p.category).filter(Boolean))].sort();
-      categories.forEach(cat => {
-        const opt = document.createElement('option');
-        opt.value = cat;
-        opt.textContent = cat;
-        categorySelect.appendChild(opt);
-      });
-    }
-
-    function applyFilters() {
-      const selectedCategory = document.getElementById('categoryFilter').value;
-      const minRating = parseFloat(document.getElementById('minRating').value) || 0;
-
-      markers.forEach(m => {
-        const p = m.placeData;
-        const ratingVal = parseFloat(p.rating) || 0;
-        const catOK = !selectedCategory || p.category === selectedCategory;
-        const ratingOK = ratingVal >= minRating;
-
-        if (catOK && ratingOK) {
-          if (!map.hasLayer(m)) m.addTo(map);
-        } else {
-          if (map.hasLayer(m)) map.removeLayer(m);
-        }
-      });
-    }
-
-    document.getElementById('applyFilters').addEventListener('click', applyFilters);
-
-    function loadCsvAndRender() {
-      Papa.parse(CSV_URL, {
-        download: true,
-        header: true,
-        dynamicTyping: true,
-        complete: function(results) {
-          places = results.data
-            .filter(row => row && row.name)
-            .map(row => {
-              let lat = row.lat;
-              let lng = row.lng;
-
-              if ((lat == null || lng == null || lat === "" || lng === "") && row.google_maps_url) {
-                const coords = extractLatLngFromUrl(row.google_maps_url);
-                if (coords) {
-                  lat = coords.lat;
-                  lng = coords.lng;
+        function init() {
+            Papa.parse(REAL_URL, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    allData = results.data.filter(row => row.name);
+                    document.getElementById('loader').classList.add('hidden');
+                    setupFilters();
+                    renderCards(allData);
+                },
+                error: function() {
+                    document.getElementById('loader').innerHTML = "Error! Make sure your sheet is 'Published to Web'.";
                 }
-              }
+            });
+        }
 
-              return {
-                name: row.name,
-                category: row.category,
-                rating: row.rating,
-                google_maps_url: row.google_maps_url,
-                lat: typeof lat === "string" ? parseFloat(lat) : lat,
-                lng: typeof lng === "string" ? parseFloat(lng) : lng
-              };
+        function setupFilters() {
+            const getUnique = (field) => [...new Set(allData.map(i => i[field]).filter(Boolean))].sort();
+            
+            fillSelect('fRegion', getUnique('region'));
+            fillSelect('fCategory', getUnique('category'));
+            fillSelect('fPricing', getUnique('pricing'));
+            fillSelect('fRating', getUnique('rating'));
+
+            document.querySelectorAll('select').forEach(s => s.addEventListener('change', applyFilters));
+        }
+
+        function fillSelect(id, values) {
+            const select = document.getElementById(id);
+            values.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = v;
+                select.appendChild(opt);
+            });
+        }
+
+        function applyFilters() {
+            const filters = {
+                region: document.getElementById('fRegion').value,
+                category: document.getElementById('fCategory').value,
+                pricing: document.getElementById('fPricing').value,
+                rating: document.getElementById('fRating').value
+            };
+
+            const filtered = allData.filter(item => {
+                return (!filters.region || item.region === filters.region) &&
+                       (!filters.category || item.category === filters.category) &&
+                       (!filters.pricing || item.pricing === filters.pricing) &&
+                       (!filters.rating || item.rating === filters.rating);
             });
 
-          populateCategoryFilter();
-          createMarkers();
+            renderCards(filtered);
         }
-      });
-    }
 
-    initMap();
-    loadCsvAndRender();
+        function renderCards(data) {
+            const grid = document.getElementById('cardGrid');
+            grid.innerHTML = data.map(item => `
+                <div class="card p-5">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-blue-500 bg-blue-50 px-2 py-1 rounded">
+                            ${item.category || 'Food'}
+                        </span>
+                        <span class="text-yellow-500 font-bold"><i class="fas fa-star"></i> ${item.rating || 'N/A'}</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-1">${item.name}</h3>
+                    <p class="text-gray-500 text-sm mb-4"><i class="fas fa-map-marker-alt"></i> ${item.region || 'Unknown'}</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-lg font-semibold text-green-600">${item.pricing || ''}</span>
+                        <a href="${item.link}" target="_blank" class="bg-blue-400 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-500 transition">
+                            View Menu <i class="fas fa-external-link-alt ml-1"></i>
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-    // Auto-refresh every 5 minutes (optional)
-    // setInterval(loadCsvAndRender, 5 * 60 * 1000);
-  </script>
+        init();
+    </script>
 </body>
 </html>
