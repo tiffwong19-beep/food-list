@@ -41,8 +41,7 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <script>
-    // 1) Point this at your live CSV
-    // CSV columns: name,category,rating,google_maps_url[,lat,lng]
+    // 1) Point this at your live CSV (Google Sheets)
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv";
 
     // 2) Extract lat/lng from Google Maps URL when needed
@@ -72,7 +71,7 @@
           }
         }
 
-        // Pattern 3: coordinates embedded as @lat,lng without decimals (fallback)
+        // Pattern 3: coordinates embedded as @lat,lng without decimals
         const atMatch2 = u.href.match(/@(-?\d+),(-?\d+)/);
         if (atMatch2) {
           return {
@@ -92,11 +91,12 @@
     let places = [];
 
     function initMap() {
-      map = L.map('map').setView([22.2819, 114.1580], 13);
+      map = L.map('map').setView([22.3193, 114.1694], 11); // Hong Kong center
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      // Simple, clean basemap
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
+        attribution: '© OpenStreetMap'
       }).addTo(map);
     }
 
@@ -123,7 +123,7 @@
         markers.push(marker);
       });
 
-      // Optionally fit map to markers
+      // Fit map to markers
       if (markers.length > 0) {
         const group = L.featureGroup(markers);
         map.fitBounds(group.getBounds().pad(0.1));
@@ -132,7 +132,6 @@
 
     function populateCategoryFilter() {
       const categorySelect = document.getElementById('categoryFilter');
-      // Clear existing besides "All"
       categorySelect.innerHTML = '<option value="">All</option>';
 
       const categories = [...new Set(places.map(p => p.category).filter(Boolean))].sort();
@@ -145,8 +144,7 @@
     }
 
     function applyFilters() {
-      const categorySelect = document.getElementById('categoryFilter');
-      const selectedCategory = categorySelect.value;
+      const selectedCategory = document.getElementById('categoryFilter').value;
       const minRating = parseFloat(document.getElementById('minRating').value) || 0;
 
       markers.forEach(m => {
@@ -172,7 +170,7 @@
         dynamicTyping: true,
         complete: function(results) {
           places = results.data
-            .filter(row => row && row.name) // basic sanity
+            .filter(row => row && row.name)
             .map(row => {
               let lat = row.lat;
               let lng = row.lng;
@@ -204,7 +202,7 @@
     initMap();
     loadCsvAndRender();
 
-    // Optional periodic poll for updated CSV:
+    // Auto-refresh every 5 minutes (optional)
     // setInterval(loadCsvAndRender, 5 * 60 * 1000);
   </script>
 </body>
