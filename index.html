@@ -6,10 +6,19 @@
     <title>Records List</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .filter-section { margin-bottom: 20px; }
+        #filterInput { 
+            width: 100%; max-width: 400px; padding: 12px; 
+            font-size: 16px; border: 2px solid #ddd; 
+            border-radius: 6px; box-sizing: border-box;
+        }
+        #filterInput:focus { outline: none; border-color: #1a73e8; }
+        .filter-count { margin-top: 8px; font-size: 14px; color: #666; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         th { background-color: #f2f2f2; font-weight: bold; }
         tr:nth-child(even) { background-color: #f9f9f9; }
+        tr.hidden { display: none; }
         a { color: #1a73e8; text-decoration: none; }
         a:hover { text-decoration: underline; }
         .loading { text-align: center; padding: 40px; font-style: italic; }
@@ -18,6 +27,12 @@
 </head>
 <body>
     <h1>Records from Google Sheets</h1>
+    
+    <div class="filter-section" style="display: none;">
+        <input type="text" id="filterInput" placeholder="Filter records (search all columns)...">
+        <div id="filterCount" class="filter-count">Showing all records</div>
+    </div>
+    
     <div id="loading" class="loading">Loading records...</div>
     <div id="error" class="error" style="display: none;"></div>
     <table id="recordsTable" style="display: none;">
@@ -26,14 +41,17 @@
     </table>
 
     <script>
+        let allRows = []; // Store original rows for filtering
+
         async function loadCSV() {
-            const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv'; // Replace with your Google Sheets CSV URL
+            const csvUrl = 'YOUR_CSV_URL_HERE'; // Replace with your Google Sheets CSV URL
             try {
                 const response = await fetch(csvUrl);
                 if (!response.ok) throw new Error('Failed to fetch CSV');
                 const csvText = await response.text();
                 const records = parseCSV(csvText);
                 renderTable(records);
+                initFilter(); // Initialize filter after table renders
             } catch (error) {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('error').textContent = `Error: ${error.message}`;
@@ -67,14 +85,19 @@
             const tableBody = document.getElementById('tableBody');
             const table = document.getElementById('recordsTable');
             const loading = document.getElementById('loading');
+            const filterSection = document.querySelector('.filter-section');
+
+            // Store original rows globally
+            allRows = rows;
 
             // Headers
             tableHead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
 
-            // Rows (handle Google Maps links: make clickable if URL-like)
-            tableBody.innerHTML = rows.map(row => {
-                return `<tr>${row.map((cell, i) => {
-                    if (headers[i] === 'google maps link' && cell.includes('http')) {
+            // Rows (handle Google Maps links)
+            tableBody.innerHTML = rows.map((row, index) => {
+                return `<tr data-row-index="${index}">${row.map((cell, i) => {
+                    const headers = Array.from(tableHead.querySelectorAll('th')).map(th => th.textContent);
+                    if (headers[i]?.toLowerCase().includes('google maps') && cell.includes('http')) {
                         return `<td><a href="${cell}" target="_blank">${cell}</a></td>`;
                     }
                     return `<td>${cell}</td>`;
@@ -83,9 +106,41 @@
 
             loading.style.display = 'none';
             table.style.display = 'table';
+            filterSection.style.display = 'block';
         }
 
-        loadCSV(); // Auto-load on page ready
+        function initFilter() {
+            const filterInput = document.getElementById('filterInput');
+            filterInput.addEventListener('input', filterTable);
+        }
+
+        function filterTable() {
+            const filterValue = document.getElementById('filterInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#recordsTable tbody tr');
+            let visibleCount = 0;
+
+            rows.forEach((row, index) => {
+                const cells = row.querySelectorAll('td');
+                const rowText = Array.from(cells)
+                    .map(cell => cell.textContent || cell.innerText || '')
+                    .join(' ')
+                    .toLowerCase();
+
+                if (rowText.includes(filterValue) || filterValue === '') {
+                    row.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('filterCount').textContent = 
+                filterValue ? 
+                `Showing ${visibleCount} of ${allRows.length} records` : 
+                `Showing all ${allRows.length} records`;
+        }
+
+        loadCSV();
     </script>
 </body>
 </html>
