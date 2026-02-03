@@ -3,83 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sheet Cards</title>
+    <title>My Mobile List</title>
     <script src="https://cdnjs.cloudflare.com"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f4f9; padding: 10px; }
-        .filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-        select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; flex: 1; min-width: 120px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
-        .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .card h3 { margin-top: 0; color: #333; }
-        .tag { display: inline-block; background: #e0e0e0; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-right: 5px; }
-        .price { font-weight: bold; color: green; }
-        .rating { color: #f39c12; }
-        a { display: block; margin-top: 10px; color: #007bff; text-decoration: none; font-weight: bold; }
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
+        .filter-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; position: sticky; top: 0; background: #f0f2f5; padding: 10px 0; z-index: 100; }
+        select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: white; font-size: 14px; -webkit-appearance: none; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100%, 1fr)); gap: 15px; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s; border: 1px solid #eee; }
+        .card h3 { margin: 0 0 10px 0; color: #1a1a1a; font-size: 1.2rem; }
+        .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+        .tag { background: #e7f3ff; color: #007bff; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .meta { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; pt: 10px; margin-top: 10px; padding-top: 10px;}
+        .price { font-weight: bold; color: #28a745; font-size: 1.1rem; }
+        .rating { color: #ffc107; font-weight: bold; }
+        .btn { display: block; text-align: center; background: #007bff; color: white; padding: 12px; border-radius: 8px; text-decoration: none; margin-top: 15px; font-weight: 600; }
+        #noResults { text-align: center; color: #666; margin-top: 50px; display: none; }
     </style>
 </head>
 <body>
 
-    <div class="filters">
-        <select id="filterRegion"><option value="">All Regions</option></select>
-        <select id="filterCategory"><option value="">All Categories</option></select>
+    <div class="filter-container">
+        <select id="fRegion"><option value="">All Regions</option></select>
+        <select id="fCategory"><option value="">All Categories</option></select>
+        <select id="fPricing"><option value="">All Pricing</option></select>
+        <select id="fRating"><option value="">All Ratings</option></select>
     </div>
 
+    <div id="noResults">No items match your filters.</div>
     <div id="cardGrid" class="grid">Loading items...</div>
 
     <script>
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv';
+        // REPLACE THIS URL WITH YOUR EXPORT LINK
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv';
+        
         let allData = [];
 
-        function init() {
-            Papa.parse(SHEET_URL, {
-                download: true,
-                header: true,
-                complete: function(results) {
-                    allData = results.data;
-                    populateFilters(allData);
-                    renderCards(allData);
-                }
+        async function fetchData() {
+            try {
+                const response = await fetch(CSV_URL);
+                const csvText = await response.text();
+                
+                Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        allData = results.data;
+                        setupFilters();
+                        renderCards(allData);
+                    }
+                });
+            } catch (error) {
+                document.getElementById('cardGrid').innerHTML = "Error loading data. Check URL and Sharing permissions.";
+            }
+        }
+
+        function setupFilters() {
+            const getUnique = (field) => [...new Set(allData.map(i => i[field]).filter(Boolean))].sort();
+            
+            fillSelect('fRegion', getUnique('region'));
+            fillSelect('fCategory', getUnique('category'));
+            fillSelect('fPricing', getUnique('pricing'));
+            fillSelect('fRating', getUnique('rating'));
+
+            document.querySelectorAll('select').forEach(s => s.addEventListener('change', filterItems));
+        }
+
+        function fillSelect(id, values) {
+            const select = document.getElementById(id);
+            values.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = v;
+                select.appendChild(opt);
             });
         }
 
-        function populateFilters(data) {
-            const regions = [...new Set(data.map(i => i.region).filter(Boolean))];
-            const categories = [...new Set(data.map(i => i.category).filter(Boolean))];
-            
-            const regSel = document.getElementById('filterRegion');
-            const catSel = document.getElementById('filterCategory');
-
-            regions.forEach(r => regSel.innerHTML += `<option value="${r}">${r}</option>`);
-            categories.forEach(c => catSel.innerHTML += `<option value="${c}">${c}</option>`);
-
-            [regSel, catSel].forEach(s => s.addEventListener('change', filterData));
-        }
-
-        function filterData() {
-            const reg = document.getElementById('filterRegion').value;
-            const cat = document.getElementById('filterCategory').value;
+        function filterItems() {
+            const filters = {
+                region: document.getElementById('fRegion').value,
+                category: document.getElementById('fCategory').value,
+                pricing: document.getElementById('fPricing').value,
+                rating: document.getElementById('fRating').value
+            };
 
             const filtered = allData.filter(item => {
-                return (!reg || item.region === reg) && (!cat || item.category === cat);
+                return (!filters.region || item.region === filters.region) &&
+                       (!filters.category || item.category === filters.category) &&
+                       (!filters.pricing || item.pricing === filters.pricing) &&
+                       (!filters.rating || item.rating === filters.rating);
             });
+
             renderCards(filtered);
+            document.getElementById('noResults').style.display = filtered.length ? 'none' : 'block';
         }
 
         function renderCards(data) {
             const grid = document.getElementById('cardGrid');
             grid.innerHTML = data.map(item => `
                 <div class="card">
+                    <div class="tag-row">
+                        <span class="tag">${item.region}</span>
+                        <span class="tag">${item.category}</span>
+                    </div>
                     <h3>${item.name}</h3>
-                    <div><span class="tag">${item.region}</span><span class="tag">${item.category}</span></div>
-                    <p class="price">${item.pricing}</p>
-                    <p class="rating">Rating: ${item.rating} ★</p>
-                    <a href="${item.link}" target="_blank">View Details →</a>
+                    <div class="meta">
+                        <span class="price">${item.pricing}</span>
+                        <span class="rating">★ ${item.rating}</span>
+                    </div>
+                    <a href="${item.link}" class="btn" target="_blank">View Details</a>
                 </div>
             `).join('');
         }
 
-        init();
+        fetchData();
     </script>
 </body>
 </html>
