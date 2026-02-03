@@ -1,209 +1,195 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>My Places Map</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Leaflet CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
-  <style>
-    body { margin: 0; padding: 0; }
-    #map { height: 90vh; }
-    #controls { padding: 8px; font-family: sans-serif; }
-    select, input, button { margin-right: 8px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Foodie Mobile</title>
+    <link rel="stylesheet" href="https://unpkg.com" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #map { height: 100%; width: 100%; position: absolute; }
+        .page { display: none; height: 100vh; width: 100vw; position: fixed; background: #f8fafc; }
+        .active { display: block; }
+        .bottom-nav { height: 75px; padding-bottom: env(safe-area-inset-bottom); }
+        .safe-area-pb { padding-bottom: 90px; }
+        ::-webkit-scrollbar { display: none; }
+    </style>
 </head>
-<body>
-  <div id="controls">
-    Category:
-    <select id="categoryFilter">
-      <option value="">All</option>
-    </select>
-    Min rating:
-    <input type="number" id="minRating" step="0.1" min="0" max="5" value="0">
-    <button id="applyFilters">Apply filters</button>
-  </div>
-  <div id="map"></div>
+<body class="bg-slate-50 overflow-hidden select-none">
 
-  <!-- Leaflet JS -->
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin="">
-  </script>
+    <!-- PAGE 1: MAP VIEW -->
+    <div id="p-map" class="page active">
+        <div id="map"></div>
+        
+        <div class="absolute top-4 left-0 right-0 px-4 z- flex gap-2">
+            <select id="f-cat" onchange="renderAll()" class="flex-1 bg-white/90 backdrop-blur shadow-lg h-12 px-4 rounded-2xl text-xs font-bold border-0">
+                <option value="">All Categories</option>
+            </select>
+            <select id="f-type" onchange="renderAll()" class="w-32 bg-white/90 backdrop-blur shadow-lg h-12 px-2 rounded-2xl text-xs font-bold border-0">
+                <option value="">All Types</option>
+                <option value="went">Visited ✅</option>
+                <option value="want to go">Wishlist ⭐</option>
+            </select>
+        </div>
 
-  <!-- Papa Parse for CSV -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+        <div class="absolute bottom-24 left-0 right-0 z- px-4 overflow-x-auto flex gap-3 pointer-events-none">
+            <div id="map-cards" class="flex gap-3 pointer-events-auto"></div>
+        </div>
+    </div>
 
-  <script>
-    // 1) Point this at your live CSV (Google Sheets)
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv";
+    <!-- PAGE 2: TO-RATE -->
+    <div id="p-rate" class="page overflow-y-auto safe-area-pb">
+        <div class="p-6">
+            <h1 class="text-3xl font-black text-slate-800 mt-8 mb-6 italic tracking-tighter">UNRATED</h1>
+            <div id="todo-list" class="space-y-4"></div>
+        </div>
+    </div>
 
-    // 2) Extract lat/lng from Google Maps URL when needed
-    function extractLatLngFromUrl(url) {
-      if (!url) return null;
-      try {
-        const u = new URL(url);
+    <!-- BOTTOM NAV -->
+    <nav class="fixed bottom-0 w-full bg-white/80 backdrop-blur-md border-t border-slate-100 flex bottom-nav z-">
+        <button onclick="showPage('p-map')" id="n-map" class="flex-1 flex flex-col items-center justify-center text-blue-600 transition-all">
+            <span class="text-2xl mb-1">📍</span><span>Explore</span>
+        </button>
+        <button onclick="showPage('p-rate')" id="n-rate" class="flex-1 flex flex-col items-center justify-center text-slate-400 transition-all">
+            <span class="text-2xl mb-1">✍️</span><span>To-Rate</span>
+        </button>
+    </nav>
 
-        // Pattern 1: .../@lat,lng,zoom...
-        const atMatch = u.href.match(/@(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/);
-        if (atMatch) {
-          return {
-            lat: parseFloat(atMatch[1]),
-            lng: parseFloat(atMatch[3])
-          };
+    <!-- ACTION SHEET (MODAL) -->
+    <div id="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-end z-">
+        <div class="bg-white w-full rounded-t-[40px] p-8 pb-10 shadow-2xl transition-transform translate-y-0">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+            <h3 id="m-name" class="text-2xl font-black text-slate-800 mb-6 truncate"></h3>
+            
+            <div class="space-y-4">
+                <input type="hidden" id="m-id">
+                
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Location Flag 🇺🇸</label>
+                    <input id="m-loc" type="text" placeholder="e.g. 🇺🇸 or 🇫🇷" class="w-full bg-slate-100 border-0 p-4 rounded-2xl font-bold text-lg outline-none">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Category</label>
+                        <select id="m-cat" class="w-full bg-slate-100 border-0 p-4 rounded-2xl font-bold text-sm outline-none">
+                            <option value="Cafe">Cafe</option><option value="Japanese">Japanese</option>
+                            <option value="Italian">Italian</option><option value="Fast Food">Fast Food</option>
+                            <option value="Bar">Bar</option><option value="Chinese">Chinese</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Type</label>
+                        <select id="m-type" class="w-full bg-slate-100 border-0 p-4 rounded-2xl font-bold text-sm outline-none">
+                            <option value="went">Went</option><option value="want to go">Want to go</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Rating</label>
+                    <select id="m-rate" class="w-full bg-slate-100 border-0 p-4 rounded-2xl font-bold text-sm outline-none">
+                        <option value="5">⭐⭐⭐⭐⭐ (Excellent)</option>
+                        <option value="4">⭐⭐⭐⭐ (Good)</option>
+                        <option value="3">⭐⭐⭐ (Average)</option>
+                    </select>
+                </div>
+
+                <button onclick="saveLocally()" class="w-full bg-blue-600 text-white p-5 rounded-3xl font-black text-lg shadow-xl shadow-blue-200 active:scale-95 transition-transform mt-4">
+                    SAVE LOCALLY
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com"></script>
+    <script>
+        // CONFIG
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pubhtml';
+        
+        let map, db = [], localData = {};
+
+        async function init() {
+            localData = JSON.parse(localStorage.getItem('my_ratings') || '{}');
+            map = L.map('map', { zoomControl: false }).setView([22.3, 114.1], 13);
+            L.tileLayer('https://{s}://{z}/{x}/{y}{r}.png').addTo(map);
+            await loadData();
         }
 
-        // Pattern 2: ...?q=lat,lng
-        const q = u.searchParams.get("q");
-        if (q) {
-          const qm = q.match(/(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)/);
-          if (qm) {
-            return {
-              lat: parseFloat(qm[1]),
-              lng: parseFloat(qm[3])
-            };
-          }
-        }
-
-        // Pattern 3: coordinates embedded as @lat,lng without decimals
-        const atMatch2 = u.href.match(/@(-?\d+),(-?\d+)/);
-        if (atMatch2) {
-          return {
-            lat: parseFloat(atMatch2[1]),
-            lng: parseFloat(atMatch2[2])
-          };
-        }
-
-        return null;
-      } catch (e) {
-        return null;
-      }
-    }
-
-    let map;
-    let markers = [];
-    let places = [];
-
-    function initMap() {
-      map = L.map('map').setView([22.3193, 114.1694], 11); // Hong Kong center
-
-      // Simple, clean basemap
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-      }).addTo(map);
-    }
-
-    function createMarkers() {
-      // Clear existing
-      markers.forEach(m => {
-        if (map.hasLayer(m)) map.removeLayer(m);
-      });
-      markers = [];
-
-      places.forEach(p => {
-        if (p.lat == null || p.lng == null || isNaN(p.lat) || isNaN(p.lng)) return;
-
-        const marker = L.marker([p.lat, p.lng]).addTo(map);
-        marker.placeData = p;
-        marker.bindPopup(
-          `<b>${p.name}</b><br>` +
-          `Category: ${p.category ?? ""}<br>` +
-          `Rating: ${p.rating ?? ""}<br>` +
-          (p.google_maps_url
-            ? `<a href="${p.google_maps_url}" target="_blank">Open in Google Maps</a>`
-            : "")
-        );
-        markers.push(marker);
-      });
-
-      // Fit map to markers
-      if (markers.length > 0) {
-        const group = L.featureGroup(markers);
-        map.fitBounds(group.getBounds().pad(0.1));
-      }
-    }
-
-    function populateCategoryFilter() {
-      const categorySelect = document.getElementById('categoryFilter');
-      categorySelect.innerHTML = '<option value="">All</option>';
-
-      const categories = [...new Set(places.map(p => p.category).filter(Boolean))].sort();
-      categories.forEach(cat => {
-        const opt = document.createElement('option');
-        opt.value = cat;
-        opt.textContent = cat;
-        categorySelect.appendChild(opt);
-      });
-    }
-
-    function applyFilters() {
-      const selectedCategory = document.getElementById('categoryFilter').value;
-      const minRating = parseFloat(document.getElementById('minRating').value) || 0;
-
-      markers.forEach(m => {
-        const p = m.placeData;
-        const ratingVal = parseFloat(p.rating) || 0;
-        const catOK = !selectedCategory || p.category === selectedCategory;
-        const ratingOK = ratingVal >= minRating;
-
-        if (catOK && ratingOK) {
-          if (!map.hasLayer(m)) m.addTo(map);
-        } else {
-          if (map.hasLayer(m)) map.removeLayer(m);
-        }
-      });
-    }
-
-    document.getElementById('applyFilters').addEventListener('click', applyFilters);
-
-    function loadCsvAndRender() {
-      Papa.parse(CSV_URL, {
-        download: true,
-        header: true,
-        dynamicTyping: true,
-        complete: function(results) {
-          places = results.data
-            .filter(row => row && row.name)
-            .map(row => {
-              let lat = row.lat;
-              let lng = row.lng;
-
-              if ((lat == null || lng == null || lat === "" || lng === "") && row.google_maps_url) {
-                const coords = extractLatLngFromUrl(row.google_maps_url);
-                if (coords) {
-                  lat = coords.lat;
-                  lng = coords.lng;
-                }
-              }
-
-              return {
-                name: row.name,
-                category: row.category,
-                rating: row.rating,
-                google_maps_url: row.google_maps_url,
-                lat: typeof lat === "string" ? parseFloat(lat) : lat,
-                lng: typeof lng === "string" ? parseFloat(lng) : lng
-              };
+        function loadData() {
+            fetch(CSV_URL).then(r => r.text()).then(text => {
+                const lines = text.split('\n').map(l => l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g, '')));
+                const headers = lines;
+                db = lines.slice(1).map(row => {
+                    let o = {};
+                    headers.forEach((h, i) => o[h] = row[i]);
+                    // Augment with local data
+                    if (localData[o.ID]) Object.assign(o, localData[o.ID]);
+                    return o;
+                }).filter(i => i.Name);
+                renderAll();
             });
-
-          populateCategoryFilter();
-          createMarkers();
         }
-      });
-    }
 
-    initMap();
-    loadCsvAndRender();
+        function renderAll() {
+            // Renders both tabs
+            const filterType = document.getElementById('f-type').value;
+            const filterCat = document.getElementById('f-cat').value;
+            const todoList = document.getElementById('todo-list');
+            const mapCards = document.getElementById('map-cards');
+            todoList.innerHTML = '';
+            mapCards.innerHTML = '';
+            map.eachLayer(layer => { if (layer instanceof L.Marker) map.removeLayer(layer); });
 
-    // Auto-refresh every 5 minutes (optional)
-    // setInterval(loadCsvAndRender, 5 * 60 * 1000);
-  </script>
+            db.forEach(item => {
+                if (!item.category) {
+                    // TO-RATE TAB
+                    todoList.innerHTML += `<div class="bg-white p-5 rounded-[30px] shadow-sm flex justify-between items-center active:scale-95 transition-all" onclick="openModal('${item.ID}')">
+                        <h3 class="font-black text-slate-800 text-lg leading-tight truncate">${item.Name}</h3>
+                        <div class="bg-blue-600 h-10 w-10 rounded-2xl flex items-center justify-center"><span class="text-white">➕</span></div>
+                    </div>`;
+                } else {
+                    // MAP TAB (Filter logic applied)
+                    if ((!filterType || item.type === filterType) && (!filterCat || item.category === filterCat)) {
+                        L.marker([item.Lat, item.Lng]).addTo(map).bindPopup(`<b>${item.Name}</b><br>${item.category} | ${item.type}`);
+                        mapCards.innerHTML += `<div class="min-w-[240px] bg-white p-4 rounded-3xl shadow-xl">
+                            <span class="text-xl mr-2">${item.location_flag}</span><b>${item.Name}</b><br><small>${item.category} • ${item.type}</small></div>`;
+                    }
+                }
+            });
+        }
+
+        function openModal(id) {
+            const item = db.find(x => x.ID == id);
+            document.getElementById('m-id').value = id;
+            document.getElementById('m-name').innerText = item.Name;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function saveLocally() {
+            const id = document.getElementById('m-id').value;
+            localData[id] = {
+                category: document.getElementById('m-cat').value,
+                type: document.getElementById('m-type').value,
+                rating: document.getElementById('m-rate').value,
+                location_flag: document.getElementById('m-loc').value
+            };
+            localStorage.setItem('my_ratings', JSON.stringify(localData));
+            closeModal();
+            loadData(); // Reload all data to ensure UIs update correctly
+        }
+
+        function showPage(p) {
+            document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+            document.getElementById(p).classList.add('active');
+            const isMap = p === 'p-map';
+            document.getElementById('n-map').className = isMap ? 'flex-1 flex flex-col items-center justify-center text-blue-600 transition-all' : 'flex-1 flex flex-col items-center justify-center text-slate-400 transition-all';
+            document.getElementById('n-rate').className = !isMap ? 'flex-1 flex flex-col items-center justify-center text-blue-600 transition-all' : 'flex-1 flex flex-col items-center justify-center text-slate-400 transition-all';
+            if(isMap) setTimeout(() => map.invalidateSize(), 200);
+        }
+
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+        window.onload = init;
+    </script>
 </body>
 </html>
