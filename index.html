@@ -4,24 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Foodie Mobile</title>
-    <link rel="stylesheet" href="https://unpkg.com" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         #map { height: 100%; width: 100%; position: absolute; }
         .page { display: none; height: 100vh; width: 100vw; position: fixed; background: #f8fafc; }
         .active { display: block; }
         .bottom-nav { height: 75px; padding-bottom: env(safe-area-inset-bottom); }
-        .safe-area-pb { padding-bottom: 90px; }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="bg-slate-50 overflow-hidden select-none">
 
-    <!-- PAGE 1: MAP VIEW -->
+    <!-- SINGLE MAP PAGE -->
     <div id="p-map" class="page active">
         <div id="map"></div>
         
-        <div class="absolute top-4 left-0 right-0 px-4 z- flex gap-2">
+        <div class="absolute top-4 left-0 right-0 px-4 z-40 flex gap-2">
             <select id="f-cat" onchange="renderAll()" class="flex-1 bg-white/90 backdrop-blur shadow-lg h-12 px-4 rounded-2xl text-xs font-bold border-0">
                 <option value="">All Categories</option>
             </select>
@@ -32,163 +31,132 @@
             </select>
         </div>
 
-        <div class="absolute bottom-24 left-0 right-0 z- px-4 overflow-x-auto flex gap-3 pointer-events-none">
+        <div class="absolute bottom-24 left-0 right-0 z-30 px-4 overflow-x-auto flex gap-3 pointer-events-none">
             <div id="map-cards" class="flex gap-3 pointer-events-auto"></div>
         </div>
     </div>
 
-    <!-- PAGE 2: TO-RATE -->
-    <div id="p-rate" class="page overflow-y-auto safe-area-pb">
-        <div class="p-6">
-            <h1 class="text-3xl font-black text-slate-800 mt-8 mb-6 italic tracking-tighter">UNRATED</h1>
-            <div id="todo-list" class="space-y-4"></div>
-        </div>
-    </div>
-
-    <!-- BOTTOM NAV -->
-    <nav class="fixed bottom-0 w-full bg-white/80 backdrop-blur-md border-t border-slate-100 flex bottom-nav z-">
+    <!-- BOTTOM NAV (MAP ONLY) -->
+    <nav class="fixed bottom-0 w-full bg-white/80 backdrop-blur-md border-t border-slate-100 flex bottom-nav z-50">
         <button onclick="showPage('p-map')" id="n-map" class="flex-1 flex flex-col items-center justify-center text-blue-600 transition-all">
             <span class="text-2xl mb-1">📍</span><span>Explore</span>
         </button>
-        <button onclick="showPage('p-rate')" id="n-rate" class="flex-1 flex flex-col items-center justify-center text-slate-400 transition-all">
-            <span class="text-2xl mb-1">✍️</span><span>To-Rate</span>
-        </button>
     </nav>
 
-    <!-- ACTION SHEET (MODAL) -->
-    <div id="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-end z-">
-        <div class="bg-white w-full rounded-t-[40px] p-8 pb-10 shadow-2xl transition-transform translate-y-0">
-            <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
-            <h3 id="m-name" class="text-2xl font-black text-slate-800 mb-6 truncate"></h3>
-            
-            <div class="space-y-4">
-                <input type="hidden" id="m-id">
-                
-                <div class="space-y-1">
-                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Location Flag 🇺🇸</label>
-                    <input id="m-loc" type="text" placeholder="e.g. 🇺🇸 or 🇫🇷" class="w-full bg-slate-100 border-0 p-4 rounded-2xl font-bold text-lg outline-none">
-                </div>
-                
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Category</label>
-                        <select id="m-cat" class="w-full bg-slate-100 border-0 p-4 rounded-2xl font-bold text-sm outline-none">
-                            <option value="Cafe">Cafe</option><option value="Japanese">Japanese</option>
-                            <option value="Italian">Italian</option><option value="Fast Food">Fast Food</option>
-                            <option value="Bar">Bar</option><option value="Chinese">Chinese</option>
-                        </select>
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Type</label>
-                        <select id="m-type" class="w-full bg-slate-100 border-0 p-4 rounded-2xl font-bold text-sm outline-none">
-                            <option value="went">Went</option><option value="want to go">Want to go</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="space-y-1">
-                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Rating</label>
-                    <select id="m-rate" class="w-full bg-slate-100 border-0 p-4 rounded-2xl font-bold text-sm outline-none">
-                        <option value="5">⭐⭐⭐⭐⭐ (Excellent)</option>
-                        <option value="4">⭐⭐⭐⭐ (Good)</option>
-                        <option value="3">⭐⭐⭐ (Average)</option>
-                    </select>
-                </div>
-
-                <button onclick="saveLocally()" class="w-full bg-blue-600 text-white p-5 rounded-3xl font-black text-lg shadow-xl shadow-blue-200 active:scale-95 transition-transform mt-4">
-                    SAVE LOCALLY
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // CONFIG
         const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pubhtml';
         
-        let map, db = [], localData = {};
+        let map, db = [];
 
         async function init() {
-            localData = JSON.parse(localStorage.getItem('my_ratings') || '{}');
             map = L.map('map', { zoomControl: false }).setView([22.3, 114.1], 13);
-            L.tileLayer('https://{s}://{z}/{x}/{y}{r}.png').addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             await loadData();
         }
 
         function loadData() {
-            fetch(CSV_URL).then(r => r.text()).then(text => {
-                const lines = text.split('\n').map(l => l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g, '')));
-                const headers = lines;
-                db = lines.slice(1).map(row => {
-                    let o = {};
-                    headers.forEach((h, i) => o[h] = row[i]);
-                    // Augment with local data
-                    if (localData[o.ID]) Object.assign(o, localData[o.ID]);
-                    return o;
-                }).filter(i => i.Name);
-                renderAll();
-            });
+            fetch(CSV_URL)
+                .then(r => r.text())
+                .then(text => {
+                    const lines = text.split('\n')
+                        .map(l => l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/))
+                        .map(row => row.map(cell => cell.trim().replace(/^"|"$/g, '')));
+                    
+                    if (lines.length < 2) return;
+                    
+                    const headers = lines[0];
+                    db = lines.slice(1).map(row => {
+                        let o = {};
+                        headers.forEach((h, i) => {
+                            if (row[i] !== undefined) o[h] = row[i];
+                        });
+                        return o;
+                    }).filter(i => i.Name && i.Lat && i.Lng);
+                    
+                    // Populate category filter
+                    const catSelect = document.getElementById('f-cat');
+                    const categories = [...new Set(db.map(i => i.category).filter(Boolean))].sort();
+                    catSelect.innerHTML = '<option value="">All Categories</option>';
+                    categories.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat;
+                        option.textContent = cat;
+                        catSelect.appendChild(option);
+                    });
+                    
+                    renderAll();
+                })
+                .catch(err => console.error('Failed to load CSV:', err));
         }
 
         function renderAll() {
-            // Renders both tabs
             const filterType = document.getElementById('f-type').value;
             const filterCat = document.getElementById('f-cat').value;
-            const todoList = document.getElementById('todo-list');
             const mapCards = document.getElementById('map-cards');
-            todoList.innerHTML = '';
+            
             mapCards.innerHTML = '';
-            map.eachLayer(layer => { if (layer instanceof L.Marker) map.removeLayer(layer); });
+            
+            // Clear existing markers
+            map.eachLayer(layer => {
+                if (layer instanceof L.Marker) {
+                    map.removeLayer(layer);
+                }
+            });
 
             db.forEach(item => {
-                if (!item.category) {
-                    // TO-RATE TAB
-                    todoList.innerHTML += `<div class="bg-white p-5 rounded-[30px] shadow-sm flex justify-between items-center active:scale-95 transition-all" onclick="openModal('${item.ID}')">
-                        <h3 class="font-black text-slate-800 text-lg leading-tight truncate">${item.Name}</h3>
-                        <div class="bg-blue-600 h-10 w-10 rounded-2xl flex items-center justify-center"><span class="text-white">➕</span></div>
-                    </div>`;
-                } else {
-                    // MAP TAB (Filter logic applied)
-                    if ((!filterType || item.type === filterType) && (!filterCat || item.category === filterCat)) {
-                        L.marker([item.Lat, item.Lng]).addTo(map).bindPopup(`<b>${item.Name}</b><br>${item.category} | ${item.type}`);
-                        mapCards.innerHTML += `<div class="min-w-[240px] bg-white p-4 rounded-3xl shadow-xl">
-                            <span class="text-xl mr-2">${item.location_flag}</span><b>${item.Name}</b><br><small>${item.category} • ${item.type}</small></div>`;
+                // Only show items that have category/rating data from file
+                if (item.category && item.Lat && item.Lng && 
+                    !isNaN(parseFloat(item.Lat)) && !isNaN(parseFloat(item.Lng))) {
+                    
+                    // Apply filters
+                    if ((!filterType || item.type === filterType) && 
+                        (!filterCat || item.category === filterCat)) {
+                        
+                        const lat = parseFloat(item.Lat);
+                        const lng = parseFloat(item.Lng);
+                        
+                        L.marker([lat, lng])
+                            .addTo(map)
+                            .bindPopup(`
+                                <div>
+                                    <b>${item.Name}</b><br>
+                                    <span class="text-sm">${item.category}</span><br>
+                                    <span class="text-sm">${item.type || 'Unspecified'}</span>
+                                    ${item.rating ? `<br><span class="text-lg">⭐${item.rating}</span>` : ''}
+                                </div>
+                            `);
+                        
+                        const flag = item.location_flag || '';
+                        const ratingStars = item.rating ? `⭐${item.rating}` : '';
+                        mapCards.innerHTML += `
+                            <div class="min-w-[240px] bg-white p-4 rounded-3xl shadow-xl flex-shrink-0">
+                                <div class="flex items-start gap-2">
+                                    ${flag ? `<span class="text-xl flex-shrink-0">${flag}</span>` : ''}
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-black text-slate-800 text-base truncate">${item.Name}</div>
+                                        <div class="text-xs text-slate-500">${item.category}${ratingStars ? ` • ${ratingStars}` : ''}</div>
+                                        <div class="text-xs text-slate-400">${item.type || 'Unspecified'}</div>
+                                    </div>
+                                </div>
+                            </div>`;
                     }
                 }
             });
         }
 
-        function openModal(id) {
-            const item = db.find(x => x.ID == id);
-            document.getElementById('m-id').value = id;
-            document.getElementById('m-name').innerText = item.Name;
-            document.getElementById('modal').style.display = 'flex';
-        }
-
-        function saveLocally() {
-            const id = document.getElementById('m-id').value;
-            localData[id] = {
-                category: document.getElementById('m-cat').value,
-                type: document.getElementById('m-type').value,
-                rating: document.getElementById('m-rate').value,
-                location_flag: document.getElementById('m-loc').value
-            };
-            localStorage.setItem('my_ratings', JSON.stringify(localData));
-            closeModal();
-            loadData(); // Reload all data to ensure UIs update correctly
-        }
-
         function showPage(p) {
+            // Only one page now, but keeping for consistency
             document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
             document.getElementById(p).classList.add('active');
-            const isMap = p === 'p-map';
-            document.getElementById('n-map').className = isMap ? 'flex-1 flex flex-col items-center justify-center text-blue-600 transition-all' : 'flex-1 flex flex-col items-center justify-center text-slate-400 transition-all';
-            document.getElementById('n-rate').className = !isMap ? 'flex-1 flex flex-col items-center justify-center text-blue-600 transition-all' : 'flex-1 flex flex-col items-center justify-center text-slate-400 transition-all';
-            if(isMap) setTimeout(() => map.invalidateSize(), 200);
+            document.getElementById('n-map').className = 'flex-1 flex flex-col items-center justify-center text-blue-600 transition-all';
+            
+            if (p === 'p-map') {
+                setTimeout(() => map.invalidateSize(), 200);
+            }
         }
 
-        function closeModal() { document.getElementById('modal').style.display = 'none'; }
         window.onload = init;
     </script>
 </body>
