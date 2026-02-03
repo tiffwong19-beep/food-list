@@ -2,229 +2,90 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Foodie Mobile</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Records List</title>
     <style>
-        #map { height: 100%; width: 100%; position: absolute; }
-        .page { display: none; height: 100vh; width: 100vw; position: fixed; background: #f8fafc; }
-        .active { display: block; }
-        .bottom-nav { height: 75px; padding-bottom: env(safe-area-inset-bottom); }
-        .safe-area-pb { padding-bottom: 90px; }
-        ::-webkit-scrollbar { display: none; }
-        .list-item { scroll-margin: 80px; }
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        a { color: #1a73e8; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .loading { text-align: center; padding: 40px; font-style: italic; }
+        .error { color: red; }
     </style>
 </head>
-<body class="bg-slate-50 overflow-hidden select-none">
+<body>
+    <h1>Records from Google Sheets</h1>
+    <div id="loading" class="loading">Loading records...</div>
+    <div id="error" class="error" style="display: none;"></div>
+    <table id="recordsTable" style="display: none;">
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+    </table>
 
-    <!-- PAGE 1: MAP VIEW -->
-    <div id="p-map" class="page active">
-        <div id="map"></div>
-        
-        <div class="absolute top-4 left-0 right-0 px-4 z-40 flex gap-2">
-            <select id="f-cat" onchange="renderAll()" class="flex-1 bg-white/90 backdrop-blur shadow-lg h-12 px-4 rounded-2xl text-xs font-bold border-0">
-                <option value="">All Categories</option>
-            </select>
-            <select id="f-type" onchange="renderAll()" class="w-32 bg-white/90 backdrop-blur shadow-lg h-12 px-2 rounded-2xl text-xs font-bold border-0">
-                <option value="">All Types</option>
-                <option value="went">Visited ✅</option>
-                <option value="want to go">Wishlist ⭐</option>
-            </select>
-        </div>
-
-        <div class="absolute bottom-24 left-0 right-0 z-30 px-4 overflow-x-auto flex gap-3 pointer-events-none">
-            <div id="map-cards" class="flex gap-3 pointer-events-auto"></div>
-        </div>
-    </div>
-
-    <!-- PAGE 2: LIST VIEW -->
-    <div id="p-list" class="page overflow-y-auto safe-area-pb">
-        <div class="p-6">
-            <h1 class="text-3xl font-black text-slate-800 mt-8 mb-8 italic tracking-tighter">RESTAURANTS</h1>
-            <div id="list-container" class="space-y-3"></div>
-        </div>
-    </div>
-
-    <!-- BOTTOM NAV -->
-    <nav class="fixed bottom-0 w-full bg-white/80 backdrop-blur-md border-t border-slate-100 flex bottom-nav z-50">
-        <button onclick="showPage('p-map')" id="n-map" class="flex-1 flex flex-col items-center justify-center text-blue-600 transition-all">
-            <span class="text-2xl mb-1">📍</span><span>Map</span>
-        </button>
-        <button onclick="showPage('p-list')" id="n-list" class="flex-1 flex flex-col items-center justify-center text-slate-400 transition-all">
-            <span class="text-2xl mb-1">📋</span><span>List</span>
-        </button>
-    </nav>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // CONFIG
-        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pubhtml';
-        
-        let map, db = [];
-
-        async function init() {
-            map = L.map('map', { zoomControl: false }).setView([22.3, 114.1], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            await loadData();
-        }
-
-        function loadData() {
-            fetch(CSV_URL)
-                .then(r => r.text())
-                .then(text => {
-                    const lines = text.split('\n')
-                        .map(l => l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/))
-                        .map(row => row.map(cell => cell.trim().replace(/^"|"$/g, '')));
-                    
-                    if (lines.length < 2) return;
-                    
-                    const headers = lines[0];
-                    db = lines.slice(1).map(row => {
-                        let o = {};
-                        headers.forEach((h, i) => {
-                            if (row[i] !== undefined) o[h] = row[i];
-                        });
-                        return o;
-                    }).filter(i => i.Name && i.Lat && i.Lng);
-                    
-                    // Populate category filter
-                    const catSelect = document.getElementById('f-cat');
-                    const categories = [...new Set(db.map(i => i.category).filter(Boolean))].sort();
-                    catSelect.innerHTML = '<option value="">All Categories</option>';
-                    categories.forEach(cat => {
-                        const option = document.createElement('option');
-                        option.value = cat;
-                        option.textContent = cat;
-                        catSelect.appendChild(option);
-                    });
-                    
-                    renderAll();
-                })
-                .catch(err => console.error('Failed to load CSV:', err));
-        }
-
-        function renderAll() {
-            const filterType = document.getElementById('f-type').value;
-            const filterCat = document.getElementById('f-cat').value;
-            
-            renderMap(filterType, filterCat);
-            renderList(filterType, filterCat);
-        }
-
-        function renderMap(filterType, filterCat) {
-            const mapCards = document.getElementById('map-cards');
-            mapCards.innerHTML = '';
-            
-            // Clear existing markers
-            map.eachLayer(layer => {
-                if (layer instanceof L.Marker) {
-                    map.removeLayer(layer);
-                }
-            });
-
-            db.forEach(item => {
-                if (item.category && item.Lat && item.Lng && 
-                    !isNaN(parseFloat(item.Lat)) && !isNaN(parseFloat(item.Lng))) {
-                    
-                    if ((!filterType || item.type === filterType) && 
-                        (!filterCat || item.category === filterCat)) {
-                        
-                        const lat = parseFloat(item.Lat);
-                        const lng = parseFloat(item.Lng);
-                        
-                        L.marker([lat, lng])
-                            .addTo(map)
-                            .bindPopup(`
-                                <div>
-                                    <b>${item.Name}</b><br>
-                                    <span class="text-sm">${item.category}</span><br>
-                                    <span class="text-sm">${item.type || 'Unspecified'}</span>
-                                    ${item.rating ? `<br><span class="text-lg">⭐${item.rating}</span>` : ''}
-                                </div>
-                            `);
-                        
-                        const flag = item.location_flag || '';
-                        const ratingStars = item.rating ? `⭐${item.rating}` : '';
-                        mapCards.innerHTML += `
-                            <div class="min-w-[240px] bg-white p-4 rounded-3xl shadow-xl flex-shrink-0">
-                                <div class="flex items-start gap-2">
-                                    ${flag ? `<span class="text-xl flex-shrink-0">${flag}</span>` : ''}
-                                    <div class="flex-1 min-w-0">
-                                        <div class="font-black text-slate-800 text-base truncate">${item.Name}</div>
-                                        <div class="text-xs text-slate-500">${item.category}${ratingStars ? ` • ${ratingStars}` : ''}</div>
-                                        <div class="text-xs text-slate-400">${item.type || 'Unspecified'}</div>
-                                    </div>
-                                </div>
-                            </div>`;
-                    }
-                }
-            });
-        }
-
-        function renderList(filterType, filterCat) {
-            const listContainer = document.getElementById('list-container');
-            listContainer.innerHTML = '';
-            
-            const filteredItems = db.filter(item => 
-                item.category && item.Lat && item.Lng && 
-                !isNaN(parseFloat(item.Lat)) && !isNaN(parseFloat(item.Lng)) &&
-                (!filterType || item.type === filterType) && 
-                (!filterCat || item.category === filterCat)
-            ).sort((a, b) => (b.rating || 0) - (a.rating || 0));
-
-            filteredItems.forEach((item, index) => {
-                const flag = item.location_flag || '';
-                const ratingStars = item.rating ? `⭐${item.rating}` : '';
-                
-                listContainer.innerHTML += `
-                    <div class="list-item bg-white p-6 rounded-3xl shadow-lg hover:shadow-xl active:scale-[0.98] transition-all cursor-pointer border border-slate-100" 
-                         onclick="flyToItem('${item.ID || index}', '${item.Lat}', '${item.Lng}')" 
-                         style="touch-action: manipulation;">
-                        <div class="flex items-start gap-3">
-                            <div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mt-1">
-                                <span class="text-white font-bold text-lg">${index + 1}</span>
-                            </div>
-                            ${flag ? `<span class="text-2xl flex-shrink-0 mt-1">${flag}</span>` : ''}
-                            <div class="flex-1 min-w-0">
-                                <div class="font-black text-xl text-slate-800 leading-tight truncate mb-1">${item.Name}</div>
-                                <div class="flex items-center gap-2 text-sm mb-1">
-                                    <span class="font-semibold text-slate-700">${item.category}</span>
-                                    ${ratingStars ? `<span class="text-lg">${ratingStars}</span>` : ''}
-                                </div>
-                                <div class="text-xs text-slate-500">${item.type || 'Unspecified'}</div>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-        }
-
-        function flyToItem(id, lat, lng) {
-            showPage('p-map');
-            map.flyTo([parseFloat(lat), parseFloat(lng)], 16, { duration: 1.2 });
-        }
-
-        function showPage(p) {
-            document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
-            document.getElementById(p).classList.add('active');
-            
-            const isMap = p === 'p-map';
-            document.getElementById('n-map').className = 
-                isMap 
-                    ? 'flex-1 flex flex-col items-center justify-center text-blue-600 transition-all'
-                    : 'flex-1 flex flex-col items-center justify-center text-slate-400 transition-all';
-            
-            document.getElementById('n-list').className = 
-                !isMap 
-                    ? 'flex-1 flex flex-col items-center justify-center text-blue-600 transition-all'
-                    : 'flex-1 flex flex-col items-center justify-center text-slate-400 transition-all';
-            
-            if (isMap) {
-                setTimeout(() => map.invalidateSize(), 200);
+        async function loadCSV() {
+            const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv'; // Replace with your Google Sheets CSV URL
+            try {
+                const response = await fetch(csvUrl);
+                if (!response.ok) throw new Error('Failed to fetch CSV');
+                const csvText = await response.text();
+                const records = parseCSV(csvText);
+                renderTable(records);
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').textContent = `Error: ${error.message}`;
+                document.getElementById('error').style.display = 'block';
             }
         }
 
-        window.onload = init;
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const rows = lines.slice(1).map(line => {
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') inQuotes = !inQuotes;
+                    else if (char === ',' && !inQuotes) {
+                        values.push(current.trim());
+                        current = '';
+                    } else current += char;
+                }
+                values.push(current.trim());
+                return values.map(v => v.replace(/"/g, ''));
+            }).filter(row => row.some(cell => cell)); // Skip empty rows
+            return { headers, rows };
+        }
+
+        function renderTable({ headers, rows }) {
+            const tableHead = document.getElementById('tableHead');
+            const tableBody = document.getElementById('tableBody');
+            const table = document.getElementById('recordsTable');
+            const loading = document.getElementById('loading');
+
+            // Headers
+            tableHead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+
+            // Rows (handle Google Maps links: make clickable if URL-like)
+            tableBody.innerHTML = rows.map(row => {
+                return `<tr>${row.map((cell, i) => {
+                    if (headers[i] === 'google maps link' && cell.includes('http')) {
+                        return `<td><a href="${cell}" target="_blank">${cell}</a></td>`;
+                    }
+                    return `<td>${cell}</td>`;
+                }).join('')}</tr>`;
+            }).join('');
+
+            loading.style.display = 'none';
+            table.style.display = 'table';
+        }
+
+        loadCSV(); // Auto-load on page ready
     </script>
 </body>
 </html>
