@@ -6,87 +6,64 @@
     <title>Bulu's Food Hunt</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com" rel="stylesheet">
-    <!-- Clean, rounded font for all devices -->
     <link href="https://fonts.googleapis.com" rel="stylesheet">
     <style>
-        * { 
-            font-family: 'Quicksand', sans-serif !important; 
-            -webkit-font-smoothing: antialiased;
-        }
+        * { font-family: 'Quicksand', sans-serif !important; -webkit-font-smoothing: antialiased; }
         body { background-color: #f8fafc; color: #334155; }
-
-        .card-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
+        
+        /* Fixed Single Column Grid */
+        .card-grid { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+            max-width: 500px; /* Limits width on desktop for better readability */
+            margin: 0 auto; 
         }
-
+        
+        /* Fixed Size Card */
         .card { 
-            position: relative;
-            flex: 0 0 auto;
-            width: fit-content;
-            min-width: 160px;
-            max-width: 300px;
+            position: relative; 
+            width: 100%; /* Force one per row */
             background: white; 
             border-radius: 18px; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.03); 
-            border: 1px solid #f1f5f9;
-            padding: 14px;
-        }
-
-        /* Rating in upper right corner */
-        .rating-badge {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            color: #fbbf24;
-            font-weight: 700;
-            font-size: 0.85rem;
-        }
-
-        #filterDrawer {
-            transition: all 0.3s ease-in-out;
-            max-height: 0;
-            overflow: hidden;
-            opacity: 0;
-        }
-        #filterDrawer.open { 
-            max-height: 1000px; 
-            opacity: 1;
-            margin-bottom: 1rem;
+            border: 1px solid #f1f5f9; 
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            min-height: 120px; /* Ensures uniform height */
         }
         
-        .collapsible-header { 
-            cursor: pointer; 
-            display: flex; 
-            justify-content: space-between; 
-            padding: 10px 0; 
-            border-bottom: 1px solid #f1f5f9; 
-            font-weight: 700;
-        }
-
-        input[type="checkbox"] { accent-color: #60a5fa; }
+        .rating-badge { position: absolute; top: 16px; right: 16px; color: #fbbf24; font-weight: 700; font-size: 0.9rem; }
+        #filterDrawer { transition: all 0.3s ease-in-out; max-height: 0; overflow: hidden; opacity: 0; }
+        #filterDrawer.open { max-height: 1500px; opacity: 1; margin-bottom: 1rem; }
+        .collapsible-header { cursor: pointer; display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 700; }
+        input[type="checkbox"] { accent-color: #60a5fa; width: 18px; height: 18px; }
     </style>
 </head>
 <body class="p-4 pb-12">
 
-    <div class="sticky top-0 bg-slate-50/90 backdrop-blur-md z-50 pb-3">
+    <div class="sticky top-0 bg-slate-50/95 backdrop-blur-md z-50 pb-3">
         <h1 class="text-3xl text-blue-400 mb-3 text-center font-bold">Bulu's Food Hunt</h1>
         
         <div class="flex items-center gap-2 max-w-md mx-auto">
             <div class="relative flex-grow">
                 <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
-                <input type="text" id="searchInput" placeholder="Search..." 
+                <input type="text" id="searchInput" placeholder="Search name..." 
                        class="w-full pl-9 pr-4 py-2 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white text-sm">
             </div>
-            <button id="funnelBtn" class="bg-white border border-gray-200 p-2 px-4 rounded-full text-blue-400 shadow-sm">
-                <i class="fas fa-filter"></i>
+            <button id="filterBtn" class="bg-white border border-gray-200 py-2 px-4 rounded-full text-blue-400 shadow-sm text-sm font-bold active:scale-95 transition-transform">
+                Filter
             </button>
         </div>
 
         <div id="filterDrawer" class="bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto">
             <div class="py-2">
+                <div class="flex justify-between items-center border-b pb-2 mb-1">
+                    <span id="resultCount" class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Loading...</span>
+                    <button onclick="clearAllFilters()" class="text-xs text-red-400 font-bold hover:underline">Clear All</button>
+                </div>
+                
                 <div class="collapsible-header" onclick="toggleSection('regionSection')">Region 📍 <i class="fas fa-chevron-down text-xs"></i></div>
                 <div id="regionSection" class="hidden py-3 flex flex-wrap gap-2"></div>
 
@@ -98,12 +75,16 @@
 
                 <div class="collapsible-header" onclick="toggleSection('rateSection')">Rating ⭐ <i class="fas fa-chevron-down text-xs"></i></div>
                 <div id="rateSection" class="hidden py-3 flex flex-wrap gap-2"></div>
+
+                <button onclick="applyAll()" class="w-full mt-4 mb-2 bg-blue-400 text-white py-2 rounded-xl font-bold shadow-md shadow-blue-100 active:scale-95 transition-transform">
+                    Apply Filters
+                </button>
             </div>
         </div>
     </div>
 
     <div id="cardGrid" class="card-grid">
-        <div id="loading" class="w-full text-center py-20 text-blue-300">Loading...</div>
+        <div id="loading" class="w-full text-center py-20 text-blue-300">Hunting for records...</div>
     </div>
 
     <script>
@@ -142,29 +123,37 @@
 
         function initUI() {
             document.getElementById('loading')?.remove();
-            ['region', 'category', 'pricing', 'rating'].forEach(f => createCheckboxFilters(f, f + 'Section'));
+            ['region', 'category', 'pricing', 'rating'].forEach(f => {
+                const values = [...new Set(allRecords.map(r => r[f]).filter(Boolean))].sort();
+                createCheckboxFilters(f, f + 'Section', values);
+            });
             renderCards(allRecords);
         }
 
-        function createCheckboxFilters(field, sectionId) {
+        function createCheckboxFilters(field, sectionId, values) {
             const container = document.getElementById(sectionId);
-            const values = [...new Set(allRecords.map(r => r[field]).filter(Boolean))].sort();
             values.forEach(val => {
                 const label = document.createElement('label');
                 label.className = "flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-xl text-xs cursor-pointer border border-slate-100";
-                label.innerHTML = `<input type="checkbox" value="${val}" onchange="updateFilters('${field}', this)"> ${val}`;
+                label.innerHTML = `<input type="checkbox" value="${val}" class="filter-checkbox" onchange="syncFilterState('${field}', this)"> ${val}`;
                 container.appendChild(label);
             });
         }
 
-        function updateFilters(field, checkbox) {
+        function syncFilterState(field, checkbox) {
             if (checkbox.checked) activeFilters[field].push(checkbox.value);
             else activeFilters[field] = activeFilters[field].filter(v => v !== checkbox.value);
+        }
+
+        function clearAllFilters() {
+            activeFilters = { region: [], category: [], pricing: [], rating: [] };
+            document.getElementById('searchInput').value = '';
+            document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = false);
             applyAll();
         }
 
         document.getElementById('searchInput').addEventListener('input', applyAll);
-        document.getElementById('funnelBtn').onclick = () => document.getElementById('filterDrawer').classList.toggle('open');
+        document.getElementById('filterBtn').onclick = () => document.getElementById('filterDrawer').classList.toggle('open');
         function toggleSection(id) { document.getElementById(id).classList.toggle('hidden'); }
 
         function applyAll() {
@@ -178,22 +167,24 @@
                 return mName && mReg && mCat && mPri && mRat;
             });
             renderCards(filtered);
+            if (window.innerWidth < 768) document.getElementById('filterDrawer').classList.remove('open');
         }
 
         function renderCards(data) {
             const grid = document.getElementById('cardGrid');
-            if(!data.length) { grid.innerHTML = `<div class="py-10 opacity-50 text-sm">No results</div>`; return; }
+            document.getElementById('resultCount').innerText = `${data.length} Results`;
+            if(!data.length) { grid.innerHTML = `<div class="py-10 opacity-50 text-center">No records found.</div>`; return; }
             grid.innerHTML = data.map(item => `
                 <div class="card">
                     <div class="rating-badge">★${item.rating}</div>
-                    <div class="flex flex-wrap gap-1 mb-1 pr-8">
-                        <span class="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase font-bold">${item.region}</span>
-                        <span class="text-[9px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded uppercase font-bold">${item.category}</span>
+                    <div class="flex flex-wrap gap-1 mb-1 pr-12">
+                        <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase font-bold tracking-tight">${item.region}</span>
+                        <span class="text-[10px] bg-blue-50 text-blue-500 px-2 py-0.5 rounded uppercase font-bold tracking-tight">${item.category}</span>
                     </div>
-                    <h3 class="text-base font-bold text-gray-800 leading-tight mb-2">${item.name}</h3>
-                    <div class="flex justify-between items-center gap-4">
-                        <span class="text-green-500 font-bold text-sm">${item.pricing}</span>
-                        <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-sm active:scale-95 transition-transform">VIEW</a>
+                    <h3 class="text-lg font-bold text-gray-800 leading-tight mb-3 pr-10">${item.name}</h3>
+                    <div class="mt-auto flex justify-between items-center gap-4 border-t border-dashed border-gray-100 pt-3">
+                        <span class="text-green-500 font-bold text-base">${item.pricing}</span>
+                        <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-6 py-2 rounded-full text-xs font-bold shadow-sm active:scale-95 transition-transform">VIEW</a>
                     </div>
                 </div>
             `).join('');
