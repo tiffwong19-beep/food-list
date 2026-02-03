@@ -3,144 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Records List</title>
+    <title>Sheet Cards</title>
+    <script src="https://cdnjs.cloudflare.com"></script>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .filter-section { margin-bottom: 20px; }
-        #filterInput { 
-            width: 100%; max-width: 400px; padding: 12px; 
-            font-size: 16px; border: 2px solid #ddd; 
-            border-radius: 6px; box-sizing: border-box;
-        }
-        #filterInput:focus { outline: none; border-color: #1a73e8; }
-        .filter-count { margin-top: 8px; font-size: 14px; color: #666; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #f2f2f2; font-weight: bold; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        tr.hidden { display: none; }
-        a { color: #1a73e8; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .loading { text-align: center; padding: 40px; font-style: italic; }
-        .error { color: red; }
+        body { font-family: sans-serif; background: #f4f4f9; padding: 10px; }
+        .filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; flex: 1; min-width: 120px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+        .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card h3 { margin-top: 0; color: #333; }
+        .tag { display: inline-block; background: #e0e0e0; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; margin-right: 5px; }
+        .price { font-weight: bold; color: green; }
+        .rating { color: #f39c12; }
+        a { display: block; margin-top: 10px; color: #007bff; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h1>Records from Google Sheets</h1>
-    
-    <div class="filter-section" style="display: none;">
-        <input type="text" id="filterInput" placeholder="Filter records (search all columns)...">
-        <div id="filterCount" class="filter-count">Showing all records</div>
+
+    <div class="filters">
+        <select id="filterRegion"><option value="">All Regions</option></select>
+        <select id="filterCategory"><option value="">All Categories</option></select>
     </div>
-    
-    <div id="loading" class="loading">Loading records...</div>
-    <div id="error" class="error" style="display: none;"></div>
-    <table id="recordsTable" style="display: none;">
-        <thead id="tableHead"></thead>
-        <tbody id="tableBody"></tbody>
-    </table>
+
+    <div id="cardGrid" class="grid">Loading items...</div>
 
     <script>
-        let allRows = []; // Store original rows for filtering
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv';
+        let allData = [];
 
-        async function loadCSV() {
-            const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pubhtml'; // Replace with your Google Sheets CSV URL
-            try {
-                const response = await fetch(csvUrl);
-                if (!response.ok) throw new Error('Failed to fetch CSV');
-                const csvText = await response.text();
-                const records = parseCSV(csvText);
-                renderTable(records);
-                initFilter(); // Initialize filter after table renders
-            } catch (error) {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('error').textContent = `Error: ${error.message}`;
-                document.getElementById('error').style.display = 'block';
-            }
-        }
-
-        function parseCSV(text) {
-            const lines = text.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-            const rows = lines.slice(1).map(line => {
-                const values = [];
-                let current = '';
-                let inQuotes = false;
-                for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    if (char === '"') inQuotes = !inQuotes;
-                    else if (char === ',' && !inQuotes) {
-                        values.push(current.trim());
-                        current = '';
-                    } else current += char;
-                }
-                values.push(current.trim());
-                return values.map(v => v.replace(/"/g, ''));
-            }).filter(row => row.some(cell => cell)); // Skip empty rows
-            return { headers, rows };
-        }
-
-        function renderTable({ headers, rows }) {
-            const tableHead = document.getElementById('tableHead');
-            const tableBody = document.getElementById('tableBody');
-            const table = document.getElementById('recordsTable');
-            const loading = document.getElementById('loading');
-            const filterSection = document.querySelector('.filter-section');
-
-            // Store original rows globally
-            allRows = rows;
-
-            // Headers
-            tableHead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
-
-            // Rows (handle Google Maps links)
-            tableBody.innerHTML = rows.map((row, index) => {
-                return `<tr data-row-index="${index}">${row.map((cell, i) => {
-                    const headers = Array.from(tableHead.querySelectorAll('th')).map(th => th.textContent);
-                    if (headers[i]?.toLowerCase().includes('google maps') && cell.includes('http')) {
-                        return `<td><a href="${cell}" target="_blank">${cell}</a></td>`;
-                    }
-                    return `<td>${cell}</td>`;
-                }).join('')}</tr>`;
-            }).join('');
-
-            loading.style.display = 'none';
-            table.style.display = 'table';
-            filterSection.style.display = 'block';
-        }
-
-        function initFilter() {
-            const filterInput = document.getElementById('filterInput');
-            filterInput.addEventListener('input', filterTable);
-        }
-
-        function filterTable() {
-            const filterValue = document.getElementById('filterInput').value.toLowerCase();
-            const rows = document.querySelectorAll('#recordsTable tbody tr');
-            let visibleCount = 0;
-
-            rows.forEach((row, index) => {
-                const cells = row.querySelectorAll('td');
-                const rowText = Array.from(cells)
-                    .map(cell => cell.textContent || cell.innerText || '')
-                    .join(' ')
-                    .toLowerCase();
-
-                if (rowText.includes(filterValue) || filterValue === '') {
-                    row.classList.remove('hidden');
-                    visibleCount++;
-                } else {
-                    row.classList.add('hidden');
+        function init() {
+            Papa.parse(SHEET_URL, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    allData = results.data;
+                    populateFilters(allData);
+                    renderCards(allData);
                 }
             });
-
-            document.getElementById('filterCount').textContent = 
-                filterValue ? 
-                `Showing ${visibleCount} of ${allRows.length} records` : 
-                `Showing all ${allRows.length} records`;
         }
 
-        loadCSV();
+        function populateFilters(data) {
+            const regions = [...new Set(data.map(i => i.region).filter(Boolean))];
+            const categories = [...new Set(data.map(i => i.category).filter(Boolean))];
+            
+            const regSel = document.getElementById('filterRegion');
+            const catSel = document.getElementById('filterCategory');
+
+            regions.forEach(r => regSel.innerHTML += `<option value="${r}">${r}</option>`);
+            categories.forEach(c => catSel.innerHTML += `<option value="${c}">${c}</option>`);
+
+            [regSel, catSel].forEach(s => s.addEventListener('change', filterData));
+        }
+
+        function filterData() {
+            const reg = document.getElementById('filterRegion').value;
+            const cat = document.getElementById('filterCategory').value;
+
+            const filtered = allData.filter(item => {
+                return (!reg || item.region === reg) && (!cat || item.category === cat);
+            });
+            renderCards(filtered);
+        }
+
+        function renderCards(data) {
+            const grid = document.getElementById('cardGrid');
+            grid.innerHTML = data.map(item => `
+                <div class="card">
+                    <h3>${item.name}</h3>
+                    <div><span class="tag">${item.region}</span><span class="tag">${item.category}</span></div>
+                    <p class="price">${item.pricing}</p>
+                    <p class="rating">Rating: ${item.rating} ★</p>
+                    <a href="${item.link}" target="_blank">View Details →</a>
+                </div>
+            `).join('');
+        }
+
+        init();
     </script>
 </body>
 </html>
