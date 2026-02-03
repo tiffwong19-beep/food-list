@@ -4,24 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bulu's Food Hunt</title>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+        @import url('https://fonts.googleapis.com');
         body { font-family: -apple-system, sans-serif; background-color: #f8fafc; }
         .chiikawa-font { font-family: 'ZCOOL KuaiLe', cursive; }
-        .filter-pill { border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 12px; background: white; font-size: 14px; outline: none; }
-        .card { background: white; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #f1f5f9; }
-        .sticky-header { position: sticky; top: 0; z-index: 50; background: rgba(248, 250, 252, 0.8); backdrop-filter: blur(10px); }
+        .filter-pill { border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; background: white; font-size: 14px; width: 100%; appearance: none; }
+        .card { background: white; border-radius: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.3); transition: transform 0.2s; }
+        .card:active { transform: scale(0.98); }
+        .sticky-header { position: sticky; top: 0; z-index: 50; background: rgba(248, 250, 252, 0.9); backdrop-filter: blur(12px); border-bottom: 1px solid #eef2f6; }
     </style>
 </head>
-<body class="p-4">
+<body class="pb-10">
 
-    <!-- Header & Filters -->
-    <div class="sticky-header pb-4">
+    <!-- Header & Filter Section -->
+    <div class="sticky-header p-4 mb-4">
         <h1 class="chiikawa-font text-3xl text-blue-400 mb-4 text-center">Bulu's Food Hunt</h1>
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-2 gap-3">
             <select id="fRegion" class="filter-pill"><option value="">All Regions</option></select>
             <select id="fCategory" class="filter-pill"><option value="">All Categories</option></select>
             <select id="fPricing" class="filter-pill"><option value="">All Prices</option></select>
@@ -29,34 +30,40 @@
         </div>
     </div>
 
-    <!-- Loading State -->
-    <div id="loader" class="text-center py-20 text-gray-500 italic">
-        <i class="fas fa-cookie-bite fa-spin text-3xl mb-2"></i><br>Finding yummy things...
+    <!-- Main Content -->
+    <div class="px-4">
+        <div id="loader" class="text-center py-20 text-gray-500 italic">
+            <i class="fas fa-utensils fa-spin text-3xl mb-3 text-blue-300"></i><br>Fetching all records...
+        </div>
+
+        <div id="cardGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Cards will load here -->
+        </div>
     </div>
 
-    <!-- Card Grid -->
-    <div id="cardGrid" class="grid grid-cols-1 gap-4"></div>
-
     <script>
-
-        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv";
-        const REAL_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv";
+        // Update this ID with your actual Google Sheet ID
+        const SHEET_ID = "1RNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs";
+        const CSV_URL = `https://docs.google.com{SHEET_ID}/export?format=csv`;
 
         let allData = [];
 
-        function init() {
-            Papa.parse(REAL_URL, {
+        async function init() {
+            Papa.parse(CSV_URL, {
                 download: true,
                 header: true,
                 skipEmptyLines: true,
                 complete: function(results) {
-                    allData = results.data.filter(row => row.name);
+                    // Filter out any completely empty rows
+                    allData = results.data.filter(row => row.name && row.name.trim() !== "");
+                    
                     document.getElementById('loader').classList.add('hidden');
                     setupFilters();
-                    renderCards(allData);
+                    renderCards(allData); // Displays ALL records by default
                 },
-                error: function() {
-                    document.getElementById('loader').innerHTML = "Error! Make sure your sheet is 'Published to Web'.";
+                error: function(err) {
+                    document.getElementById('loader').innerHTML = 
+                        `<div class="text-red-500">Error loading data. <br> Ensure the sheet is <b>Published to Web</b>.</div>`;
                 }
             });
         }
@@ -101,20 +108,35 @@
 
         function renderCards(data) {
             const grid = document.getElementById('cardGrid');
+            
+            if (data.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-10 text-gray-400">No matching places found! 🦖</div>`;
+                return;
+            }
+
             grid.innerHTML = data.map(item => `
-                <div class="card p-5">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-blue-500 bg-blue-50 px-2 py-1 rounded">
-                            ${item.category || 'Food'}
+                <div class="card p-6">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex flex-wrap gap-2">
+                            <span class="text-[10px] font-black uppercase tracking-widest bg-blue-100 text-blue-600 px-2 py-1 rounded-md">
+                                ${item.category || 'Food'}
+                            </span>
+                            <span class="text-[10px] font-black uppercase tracking-widest bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
+                                ${item.region || 'HK'}
+                            </span>
+                        </div>
+                        <span class="text-orange-400 font-bold text-sm">
+                            <i class="fas fa-star"></i> ${item.rating || '0'}
                         </span>
-                        <span class="text-yellow-500 font-bold"><i class="fas fa-star"></i> ${item.rating || 'N/A'}</span>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-1">${item.name}</h3>
-                    <p class="text-gray-500 text-sm mb-4"><i class="fas fa-map-marker-alt"></i> ${item.region || 'Unknown'}</p>
-                    <div class="flex justify-between items-center">
-                        <span class="text-lg font-semibold text-green-600">${item.pricing || ''}</span>
-                        <a href="${item.link}" target="_blank" class="bg-blue-400 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-500 transition">
-                            View Menu <i class="fas fa-external-link-alt ml-1"></i>
+                    
+                    <h3 class="text-xl font-extrabold text-gray-800 mb-4 chiikawa-font">${item.name}</h3>
+                    
+                    <div class="flex justify-between items-center mt-auto">
+                        <span class="text-lg font-bold text-green-500">${item.pricing || ''}</span>
+                        <a href="${item.link}" target="_blank" 
+                           class="bg-blue-400 shadow-lg shadow-blue-200 text-white px-5 py-2 rounded-2xl text-xs font-black hover:bg-blue-500 transition-all active:translate-y-1">
+                            GO NOW <i class="fas fa-location-arrow ml-1"></i>
                         </a>
                     </div>
                 </div>
