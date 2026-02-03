@@ -40,11 +40,12 @@
             </button>
         </div>
 
+        <!-- Filter Drawer -->
         <div id="filterDrawer" class="bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto">
             <div class="py-2">
                 <div class="flex justify-between items-center border-b pb-2 mb-1">
                     <span id="resultCount" class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Loading...</span>
-                    <button onclick="clearAllFilters()" class="text-xs text-red-400 font-bold hover:underline">Uncheck All</button>
+                    <button onclick="clearAllFilters()" class="text-xs text-red-400 font-bold hover:underline">Clear All</button>
                 </div>
                 
                 <div class="collapsible-header" onclick="toggleSection('regionSection')">Region 📍 <i class="fas fa-chevron-down text-xs"></i></div>
@@ -58,6 +59,11 @@
 
                 <div class="collapsible-header" onclick="toggleSection('rateSection')">Rating ⭐ <i class="fas fa-chevron-down text-xs"></i></div>
                 <div id="rateSection" class="hidden py-3 flex flex-wrap gap-2"></div>
+
+                <!-- Apply Button -->
+                <button onclick="applyAll()" class="w-full mt-4 mb-2 bg-blue-400 text-white py-2 rounded-xl font-bold shadow-md shadow-blue-100 active:scale-95 transition-transform">
+                    Apply Filters
+                </button>
             </div>
         </div>
     </div>
@@ -102,15 +108,11 @@
 
         function initUI() {
             document.getElementById('loading')?.remove();
-            
-            // Generate filter options and check them all by default
             ['region', 'category', 'pricing', 'rating'].forEach(f => {
                 const values = [...new Set(allRecords.map(r => r[f]).filter(Boolean))].sort();
-                activeFilters[f] = [...values]; // Set all as active
                 createCheckboxFilters(f, f + 'Section', values);
             });
-
-            renderCards(allRecords);
+            renderCards(allRecords); // Default: show all
         }
 
         function createCheckboxFilters(field, sectionId, values) {
@@ -118,16 +120,15 @@
             values.forEach(val => {
                 const label = document.createElement('label');
                 label.className = "flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-xl text-xs cursor-pointer border border-slate-100";
-                // Added "checked" attribute here
-                label.innerHTML = `<input type="checkbox" value="${val}" class="filter-checkbox" checked onchange="updateFilters('${field}', this)"> ${val}`;
+                label.innerHTML = `<input type="checkbox" value="${val}" class="filter-checkbox" onchange="syncFilterState('${field}', this)"> ${val}`;
                 container.appendChild(label);
             });
         }
 
-        function updateFilters(field, checkbox) {
+        function syncFilterState(field, checkbox) {
             if (checkbox.checked) activeFilters[field].push(checkbox.value);
             else activeFilters[field] = activeFilters[field].filter(v => v !== checkbox.value);
-            applyAll();
+            // We don't apply until the button is clicked, but search is instant
         }
 
         function clearAllFilters() {
@@ -143,15 +144,21 @@
 
         function applyAll() {
             const term = document.getElementById('searchInput').value.toLowerCase();
+            
             const filtered = allRecords.filter(r => {
                 const mName = r.name.toLowerCase().includes(term);
-                const mReg = !activeFilters.region.length || activeFilters.region.includes(r.region);
-                const mCat = !activeFilters.category.length || activeFilters.category.includes(r.category);
-                const mPri = !activeFilters.pricing.length || activeFilters.pricing.includes(r.pricing);
-                const mRat = !activeFilters.rating.length || activeFilters.rating.includes(r.rating);
+                // IF activeFilters is empty, it means no filter applied -> return true
+                const mReg = activeFilters.region.length === 0 || activeFilters.region.includes(r.region);
+                const mCat = activeFilters.category.length === 0 || activeFilters.category.includes(r.category);
+                const mPri = activeFilters.pricing.length === 0 || activeFilters.pricing.includes(r.pricing);
+                const mRat = activeFilters.rating.length === 0 || activeFilters.rating.includes(r.rating);
+                
                 return mName && mReg && mCat && mPri && mRat;
             });
+            
             renderCards(filtered);
+            // Auto close drawer on mobile after applying
+            if (window.innerWidth < 768) document.getElementById('filterDrawer').classList.remove('open');
         }
 
         function renderCards(data) {
@@ -165,7 +172,7 @@
                         <span class="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase font-bold">${item.region}</span>
                         <span class="text-[9px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded uppercase font-bold">${item.category}</span>
                     </div>
-                    <h3 class="text-base font-bold text-gray-800 leading-tight mb-1">${item.name}</h3>
+                    <h3 class="text-base font-bold text-gray-800 leading-tight mb-2">${item.name}</h3>
                     <div class="flex justify-between items-center gap-4">
                         <span class="text-green-500 font-bold text-sm">${item.pricing}</span>
                         <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-4 py-1.5 rounded-full text-[10px] font-bold shadow-sm active:scale-95 transition-transform">VIEW</a>
