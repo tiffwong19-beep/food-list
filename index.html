@@ -9,6 +9,7 @@
     <style>
         @import url('https://fonts.googleapis.com');
         
+        /* Unified Global Font */
         * { font-family: 'ZCOOL KuaiLe', cursive !important; }
         body { background-color: #f8fafc; color: #334155; }
 
@@ -30,8 +31,11 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.04); 
             border: 1px solid #f1f5f9;
             padding: 16px;
+            display: flex;
+            flex-direction: column;
         }
 
+        /* Filter Drawer Animation */
         #filterDrawer {
             transition: all 0.3s ease-in-out;
             max-height: 0;
@@ -55,7 +59,7 @@
         input[type="checkbox"] { accent-color: #60a5fa; width: 16px; height: 16px; }
     </style>
 </head>
-<body class="p-4">
+<body class="p-4 pb-12">
 
     <!-- Header & Search -->
     <div class="sticky top-0 bg-slate-50/90 backdrop-blur-md z-50 pb-4">
@@ -67,7 +71,7 @@
                 <input type="text" id="searchInput" placeholder="Search name..." 
                        class="w-full pl-10 pr-4 py-2 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
             </div>
-            <button id="funnelBtn" class="bg-white border border-gray-200 p-2 px-4 rounded-full text-xl text-blue-400 shadow-sm active:scale-90 transition-transform">
+            <button id="funnelBtn" class="bg-white border border-gray-200 p-2 px-4 rounded-full text-xl text-blue-400 shadow-sm active:scale-95 transition-transform">
                 <i class="fas fa-filter"></i>
             </button>
         </div>
@@ -81,25 +85,27 @@
                 <div class="collapsible-header" onclick="toggleSection('catSection')">Category 🍱 <i class="fas fa-chevron-down text-xs"></i></div>
                 <div id="catSection" class="hidden py-3 flex flex-wrap gap-2"></div>
                 
-                <div class="collapsible-header" onclick="toggleSection('rateSection')">Rating ⭐ <i class="fas fa-chevron-down text-xs"></i></div>
-                <div id="rateSection" class="hidden py-3 flex flex-wrap gap-2"></div>
-                
                 <div class="collapsible-header" onclick="toggleSection('priceSection')">Pricing 💰 <i class="fas fa-chevron-down text-xs"></i></div>
                 <div id="priceSection" class="hidden py-3 flex flex-wrap gap-2"></div>
 
+                <div class="collapsible-header" onclick="toggleSection('rateSection')">Rating ⭐ <i class="fas fa-chevron-down text-xs"></i></div>
+                <div id="rateSection" class="hidden py-3 flex flex-wrap gap-2"></div>
             </div>
         </div>
     </div>
 
     <!-- Liquid Results Grid -->
     <div id="cardGrid" class="card-grid">
-        <div id="loading" class="w-full text-center py-20 text-blue-300 animate-pulse">Loading places...</div>
+        <div id="loading" class="w-full text-center py-20 text-blue-300 animate-pulse">Hunting for records...</div>
     </div>
 
     <script>
-        const CSV_URL = 'https://docs.google.com';
+        // Use your CSV export link
+        const SHEET_ID = "1RNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs";
+        const CSV_URL = `https://docs.google.com{SHEET_ID}/export?format=csv`;
+
         let allRecords = [];
-        let activeFilters = { Region: [], Category: [], Pricing: [], Rating: [] };
+        let activeFilters = { region: [], category: [], pricing: [], rating: [] };
 
         async function loadData() {
             try {
@@ -108,13 +114,14 @@
                 allRecords = parseCSV(csvText);
                 initUI();
             } catch (e) {
-                document.getElementById('loading').innerText = "Load failed! Check Sheet Sharing.";
+                document.getElementById('loading').innerText = "Oops! Check your Sheet's sharing settings.";
             }
         }
 
         function parseCSV(text) {
             const lines = text.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            // Normalize headers to lowercase to avoid case-sensitivity bugs
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
             
             return lines.slice(1).map(line => {
                 const values = []; let current = '', inQuotes = false;
@@ -126,15 +133,17 @@
                 values.push(current.trim());
                 let obj = {}; headers.forEach((h, i) => obj[h] = values[i]?.replace(/"/g, '') || "");
                 return obj;
-            }).filter(r => r.Name);
+            }).filter(r => r.name);
         }
 
         function initUI() {
-            document.getElementById('loading').remove();
-            createCheckboxFilters('Region', 'regionSection');
-            createCheckboxFilters('Category', 'catSection');
-            createCheckboxFilters('Pricing', 'priceSection');
-            createCheckboxFilters('Rating', 'rateSection');
+            const loader = document.getElementById('loading');
+            if(loader) loader.remove();
+            
+            createCheckboxFilters('region', 'regionSection');
+            createCheckboxFilters('category', 'catSection');
+            createCheckboxFilters('pricing', 'priceSection');
+            createCheckboxFilters('rating', 'rateSection');
             renderCards(allRecords);
         }
 
@@ -165,11 +174,11 @@
         function applyAll() {
             const term = document.getElementById('searchInput').value.toLowerCase();
             const filtered = allRecords.filter(r => {
-                const matchName = r.Name.toLowerCase().includes(term);
-                const matchReg = activeFilters.Region.length === 0 || activeFilters.Region.includes(r.Region);
-                const matchCat = activeFilters.Category.length === 0 || activeFilters.Category.includes(r.Category);
-                const matchPrice = activeFilters.Pricing.length === 0 || activeFilters.Pricing.includes(r.Pricing);
-                const matchRate = activeFilters.Rating.length === 0 || activeFilters.Rating.includes(r.Rating);
+                const matchName = r.name.toLowerCase().includes(term);
+                const matchReg = activeFilters.region.length === 0 || activeFilters.region.includes(r.region);
+                const matchCat = activeFilters.category.length === 0 || activeFilters.category.includes(r.category);
+                const matchPrice = activeFilters.pricing.length === 0 || activeFilters.pricing.includes(r.pricing);
+                const matchRate = activeFilters.rating.length === 0 || activeFilters.rating.includes(r.rating);
                 return matchName && matchReg && matchCat && matchPrice && matchRate;
             });
             renderCards(filtered);
@@ -185,21 +194,21 @@
                 <div class="card">
                     <div class="flex flex-wrap gap-1 mb-2">
                         <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase font-bold tracking-tight">
-                            ${item.Region}
+                            ${item.region}
                         </span>
                         <span class="text-[10px] bg-blue-50 text-blue-500 px-2 py-0.5 rounded uppercase font-bold tracking-tight">
-                            ${item.Category}
+                            ${item.category}
                         </span>
                     </div>
                     
-                    <h3 class="text-xl text-gray-800 mb-4 leading-tight">${item.Name}</h3>
+                    <h3 class="text-xl text-gray-800 mb-4 leading-tight">${item.name}</h3>
                     
-                    <div class="flex justify-between items-center gap-3 border-t border-dashed border-gray-100 pt-3">
+                    <div class="mt-auto flex justify-between items-center gap-3 border-t border-dashed border-gray-100 pt-3">
                         <div>
-                            <span class="text-orange-400 text-sm font-bold">★${item.Rating}</span>
-                            <span class="text-green-500 font-bold ml-2 text-sm">${item.Pricing}</span>
+                            <span class="text-orange-400 text-sm font-bold">★${item.rating}</span>
+                            <span class="text-green-500 font-bold ml-2 text-sm">${item.pricing}</span>
                         </div>
-                        <a href="${item.Link || '#'}" target="_blank" 
+                        <a href="${item.link || '#'}" target="_blank" 
                            class="bg-blue-400 text-white px-5 py-2 rounded-full text-xs shadow-md shadow-blue-100 active:scale-95 transition-transform">
                             VIEW
                         </a>
