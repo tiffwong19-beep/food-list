@@ -1,121 +1,221 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Mobile List</title>
-    <script src="https://cdnjs.cloudflare.com"></script>
+    <title>Bulu's Food Hunt</title>
+	<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
-        .filter-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; position: sticky; top: 0; background: #f0f2f5; padding: 10px 0; z-index: 100; }
-        select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: white; font-size: 14px; -webkit-appearance: none; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100%, 1fr)); gap: 15px; }
-        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s; border: 1px solid #eee; }
-        .card h3 { margin: 0 0 10px 0; color: #1a1a1a; font-size: 1.2rem; }
-        .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-        .tag { background: #e7f3ff; color: #007bff; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-        .meta { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; pt: 10px; margin-top: 10px; padding-top: 10px;}
-        .price { font-weight: bold; color: #28a745; font-size: 1.1rem; }
-        .rating { color: #ffc107; font-weight: bold; }
-        .btn { display: block; text-align: center; background: #007bff; color: white; padding: 12px; border-radius: 8px; text-decoration: none; margin-top: 15px; font-weight: 600; }
-        #noResults { text-align: center; color: #666; margin-top: 50px; display: none; }
+		@import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+        body { font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto; background-color: #f8fafc; }
+		#map { height: 90vh; }
+		#controls { padding: 8px; font-family: sans-serif; }
+		select, input, button { margin-right: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        a { color: #1a73e8; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .loading { text-align: center; padding: 40px; font-style: italic; }
+        .error { color: red; }
+		.chiikawa-font { font-family: 'ZCOOL KuaiLe', cursive; }
+        .blue-gradient { background: linear-gradient(135deg, #a5d8ff 0%, #74c0fc 100%); }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.3); }
+        .map-box { width: 100%; height: 180px; border-radius: 20px; border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
+        .modal-overlay { background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); z-index: 200; }
+        .active-tab-indicator { position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); width: 20px; height: 4px; background: #339af0; border-radius: 10px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
+  <div id="controls">
+    Category:
+    <select id="categoryFilter">
+      <option value="">All</option>
+    </select>
+    Min rating:
+    <input type="number" id="minRating" step="0.1" min="0" max="5" value="0">
+    <button id="applyFilters">Apply filters</button>
+  </div>
+  <div id="map"></div>
 
-    <div class="filter-container">
-        <select id="fRegion"><option value="">All Regions</option></select>
-        <select id="fCategory"><option value="">All Categories</option></select>
-        <select id="fPricing"><option value="">All Pricing</option></select>
-        <select id="fRating"><option value="">All Ratings</option></select>
-    </div>
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin="">
+  </script>
 
-    <div id="noResults">No items match your filters.</div>
-    <div id="cardGrid" class="grid">Loading items...</div>
+  <!-- Papa Parse for CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-    <script>
-        // REPLACE THIS URL WITH YOUR EXPORT LINK
-        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv';
-        
-        let allData = [];
+  <script>
+    // 1) Point this at your live CSV (Google Sheets)
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pubhtml";
 
-        async function fetchData() {
-            try {
-                const response = await fetch(CSV_URL);
-                const csvText = await response.text();
-                
-                Papa.parse(csvText, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        allData = results.data;
-                        setupFilters();
-                        renderCards(allData);
-                    }
-                });
-            } catch (error) {
-                document.getElementById('cardGrid').innerHTML = "Error loading data. Check URL and Sharing permissions.";
-            }
+    // 2) Extract lat/lng from Google Maps URL when needed
+    function extractLatLngFromUrl(url) {
+      if (!url) return null;
+      try {
+        const u = new URL(url);
+
+        // Pattern 1: .../@lat,lng,zoom...
+        const atMatch = u.href.match(/@(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/);
+        if (atMatch) {
+          return {
+            lat: parseFloat(atMatch[1]),
+            lng: parseFloat(atMatch[3])
+          };
         }
 
-        function setupFilters() {
-            const getUnique = (field) => [...new Set(allData.map(i => i[field]).filter(Boolean))].sort();
-            
-            fillSelect('fRegion', getUnique('region'));
-            fillSelect('fCategory', getUnique('category'));
-            fillSelect('fPricing', getUnique('pricing'));
-            fillSelect('fRating', getUnique('rating'));
-
-            document.querySelectorAll('select').forEach(s => s.addEventListener('change', filterItems));
-        }
-
-        function fillSelect(id, values) {
-            const select = document.getElementById(id);
-            values.forEach(v => {
-                const opt = document.createElement('option');
-                opt.value = opt.textContent = v;
-                select.appendChild(opt);
-            });
-        }
-
-        function filterItems() {
-            const filters = {
-                region: document.getElementById('fRegion').value,
-                category: document.getElementById('fCategory').value,
-                pricing: document.getElementById('fPricing').value,
-                rating: document.getElementById('fRating').value
+        // Pattern 2: ...?q=lat,lng
+        const q = u.searchParams.get("q");
+        if (q) {
+          const qm = q.match(/(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)/);
+          if (qm) {
+            return {
+              lat: parseFloat(qm[1]),
+              lng: parseFloat(qm[3])
             };
+          }
+        }
 
-            const filtered = allData.filter(item => {
-                return (!filters.region || item.region === filters.region) &&
-                       (!filters.category || item.category === filters.category) &&
-                       (!filters.pricing || item.pricing === filters.pricing) &&
-                       (!filters.rating || item.rating === filters.rating);
+        // Pattern 3: coordinates embedded as @lat,lng without decimals
+        const atMatch2 = u.href.match(/@(-?\d+),(-?\d+)/);
+        if (atMatch2) {
+          return {
+            lat: parseFloat(atMatch2[1]),
+            lng: parseFloat(atMatch2[2])
+          };
+        }
+
+        return null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    let map;
+    let markers = [];
+    let places = [];
+
+    function initMap() {
+      map = L.map('map').setView([22.3193, 114.1694], 11); // Hong Kong center
+
+      // Simple, clean basemap
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+    }
+
+    function createMarkers() {
+      // Clear existing
+      markers.forEach(m => {
+        if (map.hasLayer(m)) map.removeLayer(m);
+      });
+      markers = [];
+
+      places.forEach(p => {
+        if (p.lat == null || p.lng == null || isNaN(p.lat) || isNaN(p.lng)) return;
+
+        const marker = L.marker([p.lat, p.lng]).addTo(map);
+        marker.placeData = p;
+        marker.bindPopup(
+          `<b>${p.name}</b><br>` +
+          `Category: ${p.category ?? ""}<br>` +
+          `Rating: ${p.rating ?? ""}<br>` +
+          (p.google_maps_url
+            ? `<a href="${p.google_maps_url}" target="_blank">Open in Google Maps</a>`
+            : "")
+        );
+        markers.push(marker);
+      });
+
+      // Fit map to markers
+      if (markers.length > 0) {
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.1));
+      }
+    }
+
+    function populateCategoryFilter() {
+      const categorySelect = document.getElementById('categoryFilter');
+      categorySelect.innerHTML = '<option value="">All</option>';
+
+      const categories = [...new Set(places.map(p => p.category).filter(Boolean))].sort();
+      categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        categorySelect.appendChild(opt);
+      });
+    }
+
+    function applyFilters() {
+      const selectedCategory = document.getElementById('categoryFilter').value;
+      const minRating = parseFloat(document.getElementById('minRating').value) || 0;
+
+      markers.forEach(m => {
+        const p = m.placeData;
+        const ratingVal = parseFloat(p.rating) || 0;
+        const catOK = !selectedCategory || p.category === selectedCategory;
+        const ratingOK = ratingVal >= minRating;
+
+        if (catOK && ratingOK) {
+          if (!map.hasLayer(m)) m.addTo(map);
+        } else {
+          if (map.hasLayer(m)) map.removeLayer(m);
+        }
+      });
+    }
+
+    document.getElementById('applyFilters').addEventListener('click', applyFilters);
+
+    function loadCsvAndRender() {
+      Papa.parse(CSV_URL, {
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results) {
+          places = results.data
+            .filter(row => row && row.name)
+            .map(row => {
+              let lat = row.lat;
+              let lng = row.lng;
+
+              if ((lat == null || lng == null || lat === "" || lng === "") && row.google_maps_url) {
+                const coords = extractLatLngFromUrl(row.google_maps_url);
+                if (coords) {
+                  lat = coords.lat;
+                  lng = coords.lng;
+                }
+              }
+
+              return {
+                name: row.name,
+                category: row.category,
+                rating: row.rating,
+                google_maps_url: row.google_maps_url,
+                lat: typeof lat === "string" ? parseFloat(lat) : lat,
+                lng: typeof lng === "string" ? parseFloat(lng) : lng
+              };
             });
 
-            renderCards(filtered);
-            document.getElementById('noResults').style.display = filtered.length ? 'none' : 'block';
+          populateCategoryFilter();
+          createMarkers();
         }
+      });
+    }
 
-        function renderCards(data) {
-            const grid = document.getElementById('cardGrid');
-            grid.innerHTML = data.map(item => `
-                <div class="card">
-                    <div class="tag-row">
-                        <span class="tag">${item.region}</span>
-                        <span class="tag">${item.category}</span>
-                    </div>
-                    <h3>${item.name}</h3>
-                    <div class="meta">
-                        <span class="price">${item.pricing}</span>
-                        <span class="rating">★ ${item.rating}</span>
-                    </div>
-                    <a href="${item.link}" class="btn" target="_blank">View Details</a>
-                </div>
-            `).join('');
-        }
+    initMap();
+    loadCsvAndRender();
 
-        fetchData();
-    </script>
+    // Auto-refresh every 5 minutes (optional)
+    // setInterval(loadCsvAndRender, 5 * 60 * 1000);
+  </script>
 </body>
 </html>
