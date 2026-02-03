@@ -19,7 +19,7 @@
         }
         .rating-badge { position: absolute; top: 12px; right: 12px; color: #fbbf24; font-weight: 700; font-size: 0.85rem; }
         #filterDrawer { transition: all 0.3s ease-in-out; max-height: 0; overflow: hidden; opacity: 0; }
-        #filterDrawer.open { max-height: 1200px; opacity: 1; margin-bottom: 1rem; }
+        #filterDrawer.open { max-height: 1500px; opacity: 1; margin-bottom: 1rem; }
         .collapsible-header { cursor: pointer; display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 700; }
         input[type="checkbox"] { accent-color: #60a5fa; width: 16px; height: 16px; }
     </style>
@@ -35,7 +35,6 @@
                 <input type="text" id="searchInput" placeholder="Search..." 
                        class="w-full pl-9 pr-4 py-2 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white text-sm">
             </div>
-            <!-- Changed Funnel Icon to "Filter" Text -->
             <button id="filterBtn" class="bg-white border border-gray-200 py-2 px-4 rounded-full text-blue-400 shadow-sm text-sm font-bold active:scale-95 transition-transform">
                 Filter
             </button>
@@ -45,7 +44,7 @@
             <div class="py-2">
                 <div class="flex justify-between items-center border-b pb-2 mb-1">
                     <span id="resultCount" class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Loading...</span>
-                    <button onclick="clearAllFilters()" class="text-xs text-red-400 font-bold hover:underline">Clear All</button>
+                    <button onclick="clearAllFilters()" class="text-xs text-red-400 font-bold hover:underline">Uncheck All</button>
                 </div>
                 
                 <div class="collapsible-header" onclick="toggleSection('regionSection')">Region 📍 <i class="fas fa-chevron-down text-xs"></i></div>
@@ -68,6 +67,7 @@
     </div>
 
     <script>
+        
         const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfKG3v-7ATgwAUWo-4P_ASP-_nEL0Azv1TWTRMoPwbIYhWNTsNMDaso7kF7t2jh27McbUaMu6hdQs/pub?output=csv';
 
         let allRecords = [];
@@ -102,17 +102,24 @@
 
         function initUI() {
             document.getElementById('loading')?.remove();
-            ['region', 'category', 'pricing', 'rating'].forEach(f => createCheckboxFilters(f, f + 'Section'));
+            
+            // Generate filter options and check them all by default
+            ['region', 'category', 'pricing', 'rating'].forEach(f => {
+                const values = [...new Set(allRecords.map(r => r[f]).filter(Boolean))].sort();
+                activeFilters[f] = [...values]; // Set all as active
+                createCheckboxFilters(f, f + 'Section', values);
+            });
+
             renderCards(allRecords);
         }
 
-        function createCheckboxFilters(field, sectionId) {
+        function createCheckboxFilters(field, sectionId, values) {
             const container = document.getElementById(sectionId);
-            const values = [...new Set(allRecords.map(r => r[field]).filter(Boolean))].sort();
             values.forEach(val => {
                 const label = document.createElement('label');
                 label.className = "flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-xl text-xs cursor-pointer border border-slate-100";
-                label.innerHTML = `<input type="checkbox" value="${val}" class="filter-checkbox" onchange="updateFilters('${field}', this)"> ${val}`;
+                // Added "checked" attribute here
+                label.innerHTML = `<input type="checkbox" value="${val}" class="filter-checkbox" checked onchange="updateFilters('${field}', this)"> ${val}`;
                 container.appendChild(label);
             });
         }
