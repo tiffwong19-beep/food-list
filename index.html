@@ -75,6 +75,12 @@
                 const response = await fetch(CSV_URL);
                 const csvText = await response.text();
                 allRecords = parseCSV(csvText);
+
+                // SORTING LOGIC: Alphabetical (A-Z) and Chinese (Strokes/Radical)
+                allRecords.sort((a, b) => {
+                    return (a.name || "").localeCompare((b.name || ""), 'zh-Hant-HK', { numeric: true, sensitivity: 'base' });
+                });
+
                 initUI();
             } catch (e) {
                 document.getElementById('loading').innerText = "Error: Check Sheet Sharing Settings";
@@ -83,7 +89,6 @@
 
         function parseCSV(text) {
             const lines = text.trim().split('\n');
-            // Clean headers: trim spaces and handle quotes
             const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
             
             return lines.slice(1).map(line => {
@@ -100,12 +105,11 @@
                 
                 let obj = {}; 
                 headers.forEach((h, i) => {
-                    // Match column name even if it has a space like "region "
                     const cleanHeader = h.trim();
                     obj[cleanHeader] = values[i]?.replace(/"/g, '') || "";
                 });
                 return obj;
-            }).filter(r => r.name); // Ensure the row has a name
+            }).filter(r => r.name);
         }
 
         function initUI() {
@@ -113,7 +117,10 @@
             if(loader) loader.remove();
 
             ['region', 'category', 'pricing', 'rating'].forEach(f => {
-                const values = [...new Set(allRecords.map(r => r[f]).filter(Boolean))].sort();
+                // Also sort the checkboxes in the filter drawer
+                const values = [...new Set(allRecords.map(r => r[f]).filter(Boolean))].sort((a, b) => 
+                    a.localeCompare(b, 'zh-Hant-HK', { numeric: true })
+                );
                 createCheckboxFilters(f, f + 'Section', values);
             });
             renderCards(allRecords);
