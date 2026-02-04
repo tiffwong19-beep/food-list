@@ -41,6 +41,10 @@
         
         .collapsible-header { cursor: pointer; display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 700; }
         input[type="checkbox"] { accent-color: #60a5fa; width: 18px; height: 18px; }
+
+        /* Clear Search Button Styling */
+        #clearSearch { display: none; }
+        #searchInput:not(:placeholder-shown) + #clearSearch { display: block; }
     </style>
 </head>
 <body class="p-4 pb-12">
@@ -51,7 +55,11 @@
         <div class="flex items-center gap-2 max-w-md mx-auto">
             <div class="relative flex-grow">
                 <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
-                <input type="text" id="searchInput" placeholder="搜尋名稱 Search..." class="w-full pl-9 pr-4 py-2 rounded-full border border-gray-200 focus:outline-none bg-white text-sm">
+                <input type="text" id="searchInput" placeholder="搜尋名稱 Search..." class="w-full pl-9 pr-10 py-2 rounded-full border border-gray-200 focus:outline-none bg-white text-sm">
+                <!-- X Button to Clear Input -->
+                <button id="clearSearch" onclick="resetSearch()" class="absolute right-3 top-2 text-gray-400 hover:text-gray-600 focus:outline-none p-1">
+                    <i class="fas fa-times-circle"></i>
+                </button>
             </div>
             <button id="filterBtn" class="bg-white border border-gray-200 py-2 px-4 rounded-full text-blue-400 font-bold text-sm shadow-sm">Filter</button>
         </div>
@@ -146,8 +154,15 @@
 
         function clearAllFilters() {
             activeFilters = { region: [], category: [], pricing: [], rating: [] };
-            document.getElementById('searchInput').value = '';
+            resetSearch();
             document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = false);
+            applyAll();
+        }
+
+        function resetSearch() {
+            const input = document.getElementById('searchInput');
+            input.value = '';
+            input.focus();
             applyAll();
         }
 
@@ -167,9 +182,9 @@
             });
             
             renderCards(filtered);
-            
-            // AUTO COLLAPSE: Remove the 'open' class after applying filters
-            document.getElementById('filterDrawer').classList.remove('open');
+            if (event && event.type === 'click' && event.target.id !== 'clearSearch') {
+                document.getElementById('filterDrawer').classList.remove('open');
+            }
         }
 
         function renderCards(data) {
@@ -187,7 +202,7 @@
                 <div class="card">
                     <div class="emoji-thumbnail">${emoji}</div>
                     <div class="card-content">
-                        <div class="rating-badge">${item.rating}</div>
+                        <div class="rating-badge">★${item.rating}</div>
                         <div class="flex flex-wrap gap-1 mb-1 pr-12">
                             <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase font-bold tracking-tight">${item.region}</span>
                             <span class="text-[10px] bg-blue-50 text-blue-500 px-2 py-0.5 rounded uppercase font-bold tracking-tight">${catName}</span>
