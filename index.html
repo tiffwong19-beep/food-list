@@ -36,8 +36,16 @@
         .collapsible-header { cursor: pointer; display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 700; }
         input[type="checkbox"] { accent-color: #60a5fa; width: 18px; height: 18px; }
 
-        /* Hidden by default, shown via JS */
-        #clearSearch { display: none; }
+        /* Force visibility of the clear button container */
+        .search-wrapper { position: relative; display: flex; align-items: center; flex-grow: 1; }
+        #clearSearch { 
+            position: absolute; 
+            right: 12px; 
+            z-index: 60; 
+            display: none; /* Controlled by JS */
+            background: white; 
+            border-radius: 50%;
+        }
     </style>
 </head>
 <body class="p-4 pb-12">
@@ -46,13 +54,13 @@
         <h1 class="text-3xl text-blue-400 mb-3 font-bold">Bulu's Food Hunt</h1>
         
         <div class="flex items-center gap-2 max-w-md mx-auto">
-            <div class="relative flex-grow">
-                <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
-                <input type="text" id="searchInput" placeholder="搜尋名稱 Search..." 
-                       oninput="toggleClearBtn()"
+            <div class="search-wrapper">
+                <i class="fas fa-search absolute left-3 text-gray-400 text-sm"></i>
+                <input type="text" id="searchInput" placeholder="搜尋 Search..." 
+                       oninput="handleSearchInput()"
                        class="w-full pl-9 pr-10 py-2 rounded-full border border-gray-200 focus:outline-none bg-white text-sm">
-                <!-- Manual trigger for Clear -->
-                <button id="clearSearch" onclick="resetSearch()" class="absolute right-3 top-2.5 text-gray-400 hover:text-blue-400 p-0.5">
+                <!-- NEW: Clear button with explicit z-index -->
+                <button id="clearSearch" onclick="resetSearch()" class="text-gray-400 hover:text-blue-500">
                     <i class="fas fa-times-circle text-lg"></i>
                 </button>
             </div>
@@ -84,7 +92,7 @@
     </div>
 
     <div id="cardGrid" class="card-grid">
-        <div id="loading" class="w-full text-center py-20 text-blue-300">Hunting for yummy records...</div>
+        <div id="loading" class="w-full text-center py-20 text-blue-300">Hunting...</div>
     </div>
 
     <script>
@@ -101,9 +109,7 @@
                 allRecords = parseCSV(csvText);
                 allRecords.sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant-HK', { numeric: true }));
                 initUI();
-            } catch (e) {
-                document.getElementById('loading').innerText = "Error: Check Sheet Sharing Settings";
-            }
+            } catch (e) { console.error(e); }
         }
 
         function parseCSV(text) {
@@ -147,19 +153,18 @@
             else activeFilters[field] = activeFilters[field].filter(v => v !== checkbox.value);
         }
 
-        function toggleClearBtn() {
+        function handleSearchInput() {
             const input = document.getElementById('searchInput');
-            const btn = document.getElementById('clearSearch');
-            btn.style.display = input.value.length > 0 ? 'block' : 'none';
+            const clearBtn = document.getElementById('clearSearch');
+            clearBtn.style.display = input.value.length > 0 ? 'block' : 'none';
             applyAll('instant');
         }
 
         function resetSearch() {
             const input = document.getElementById('searchInput');
             input.value = '';
-            toggleClearBtn();
+            handleSearchInput();
             input.focus();
-            applyAll();
         }
 
         function clearAllFilters() {
@@ -196,27 +201,25 @@
         function renderCards(data) {
             const grid = document.getElementById('cardGrid');
             document.getElementById('resultCount').innerText = `${data.length} Results`;
-            if(!data.length) { grid.innerHTML = `<div class="py-10 opacity-50 text-center text-sm">No records found.</div>`; return; }
+            if(!data.length) { grid.innerHTML = `<div class="py-10 opacity-50 text-center text-sm">No records.</div>`; return; }
             
             grid.innerHTML = data.map(item => {
-                const catStr = item.category || "";
-                const chars = Array.from(catStr);
+                const chars = Array.from(item.category || "");
                 const emoji = chars.length > 0 ? chars[0] : "🍴";
-                const catName = chars.length > 1 ? chars.slice(1).join("") : catStr;
-
+                const catName = chars.slice(1).join("");
                 return `
                 <div class="card">
                     <div class="emoji-thumbnail">${emoji}</div>
                     <div class="card-content">
                         <div class="rating-badge">★${item.rating}</div>
                         <div class="flex flex-wrap gap-1 mb-1 pr-12">
-                            <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase font-bold tracking-tight">${item.region}</span>
-                            <span class="text-[10px] bg-blue-50 text-blue-500 px-2 py-0.5 rounded uppercase font-bold tracking-tight">${catName}</span>
+                            <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase font-bold">${item.region}</span>
+                            <span class="text-[10px] bg-blue-50 text-blue-500 px-2 py-0.5 rounded uppercase font-bold">${catName}</span>
                         </div>
                         <h3 class="text-base font-bold text-gray-800 leading-tight mb-2 pr-4">${item.name}</h3>
                         <div class="flex justify-between items-center gap-4 border-t border-dashed border-gray-100 pt-2">
                             <span class="text-green-600 font-bold text-sm">${item.pricing}</span>
-                            <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-5 py-1.5 rounded-full text-xs font-bold shadow-sm">VIEW</a>
+                            <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-5 py-1.5 rounded-full text-xs font-bold active:scale-95 transition-transform">VIEW</a>
                         </div>
                     </div>
                 </div>`;
