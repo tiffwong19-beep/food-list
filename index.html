@@ -7,9 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com" rel="stylesheet">
     <link href="https://fonts.googleapis.com" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com"></script>
     <style>
-        /* Quicksand handles English/Numbers, System fonts handle Chinese/Emojis */
         * { 
             font-family: 'Quicksand', "Microsoft JhengHei", "Heiti TC", sans-serif !important; 
             -webkit-font-smoothing: antialiased; 
@@ -17,7 +15,7 @@
         body { background-color: #f8fafc; color: #334155; }
         .card-grid { display: flex; flex-direction: column; gap: 12px; max-width: 500px; margin: 0 auto; }
         .card { position: relative; width: 100%; background: white; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; padding: 16px; display: flex; flex-direction: column; min-height: 130px; }
-        .rating-badge { position: absolute; top: 16px; right: 16px; color: #fbbf24; font-weight: 700; font-size: 0.9rem; }
+        .rating-badge { position: absolute; top: 16px; right: 16px; font-weight: 700; font-size: 0.9rem; }
         #filterDrawer { transition: all 0.3s ease-in-out; max-height: 0; overflow: hidden; opacity: 0; }
         #filterDrawer.open { max-height: 2000px; opacity: 1; margin-bottom: 1rem; }
         .collapsible-header { cursor: pointer; display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 700; }
@@ -26,46 +24,43 @@
 </head>
 <body class="p-4 pb-12">
 
-    <div class="sticky top-0 bg-slate-50/95 backdrop-blur-md z-50 pb-3">
-        <h1 class="text-3xl text-blue-400 mb-3 text-center font-bold">Bulu's Food Hunt</h1>
+    <div class="sticky top-0 bg-slate-50/95 backdrop-blur-md z-50 pb-3 text-center">
+        <h1 class="text-3xl text-blue-400 mb-3 font-bold">Bulu's Food Hunt</h1>
         
         <div class="flex items-center gap-2 max-w-md mx-auto">
             <div class="relative flex-grow">
                 <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
-                <input type="text" id="searchInput" placeholder="搜尋名稱 / Search..." class="w-full pl-9 pr-4 py-2 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white text-sm">
+                <input type="text" id="searchInput" placeholder="搜尋名稱 Search..." class="w-full pl-9 pr-4 py-2 rounded-full border border-gray-200 focus:outline-none bg-white text-sm">
             </div>
-            <button id="filterBtn" class="bg-white border border-gray-200 py-2 px-4 rounded-full text-blue-400 shadow-sm text-sm font-bold active:scale-95 transition-transform">篩選 Filter</button>
+            <button id="filterBtn" class="bg-white border border-gray-200 py-2 px-4 rounded-full text-blue-400 font-bold text-sm">Filter</button>
         </div>
 
-        <div id="filterDrawer" class="bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto">
+        <div id="filterDrawer" class="bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto text-left">
             <div class="py-2">
                 <div class="flex justify-between items-center border-b pb-2 mb-1">
-                    <span id="resultCount" class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Loading...</span>
-                    <button onclick="clearAllFilters()" class="text-xs text-red-400 font-bold hover:underline">清除 Clear</button>
+                    <span id="resultCount" class="text-[10px] text-gray-400 font-bold uppercase">Loading...</span>
+                    <button onclick="clearAllFilters()" class="text-xs text-red-400 font-bold">Clear All</button>
                 </div>
                 
-                <!-- Headers are English, Content will be Chinese/Emoji -->
-                <div class="collapsible-header" onclick="toggleSection('regionSection')">地區 Region 📍 <i class="fas fa-chevron-down text-xs"></i></div>
+                <div class="collapsible-header" onclick="toggleSection('regionSection')">Region 📍 <i class="fas fa-chevron-down text-xs"></i></div>
                 <div id="regionSection" class="hidden py-3 flex flex-wrap gap-2"></div>
 
-                <div class="collapsible-header" onclick="toggleSection('categorySection')">種類 Category 🍱 <i class="fas fa-chevron-down text-xs"></i></div>
+                <div class="collapsible-header" onclick="toggleSection('categorySection')">Category 🍱 <i class="fas fa-chevron-down text-xs"></i></div>
                 <div id="categorySection" class="hidden py-3 flex flex-wrap gap-2"></div>
                 
-                <div class="collapsible-header" onclick="toggleSection('pricingSection')">價錢 Pricing 💰 <i class="fas fa-chevron-down text-xs"></i></div>
+                <div class="collapsible-header" onclick="toggleSection('pricingSection')">Pricing 💰 <i class="fas fa-chevron-down text-xs"></i></div>
                 <div id="pricingSection" class="hidden py-3 flex flex-wrap gap-2"></div>
 
-                <div class="collapsible-header" onclick="toggleSection('ratingSection')">評分 Rating ⭐ <i class="fas fa-chevron-down text-xs"></i></div>
+                <div class="collapsible-header" onclick="toggleSection('ratingSection')">Rating ⭐ <i class="fas fa-chevron-down text-xs"></i></div>
                 <div id="ratingSection" class="hidden py-3 flex flex-wrap gap-2"></div>
 
-                <button onclick="applyAll()" class="w-full mt-4 mb-2 bg-blue-400 text-white py-2 rounded-xl font-bold shadow-md active:scale-95 transition-transform">
-                    應用篩選 Apply
-                </button>
+                <button onclick="applyAll()" class="w-full mt-4 mb-2 bg-blue-400 text-white py-2 rounded-xl font-bold shadow-md">Apply Filters</button>
             </div>
         </div>
     </div>
 
     <div id="cardGrid" class="card-grid">
-        <div id="loading" class="w-full text-center py-20 text-blue-300 animate-pulse font-bold text-lg">載入中... Hunting...</div>
+        <div id="loading" class="w-full text-center py-20 text-blue-300">Hunting for yummy records...</div>
     </div>
 
     <script>
@@ -76,26 +71,49 @@
         let activeFilters = { region: [], category: [], pricing: [], rating: [] };
 
         async function loadData() {
-            Papa.parse(CSV_URL, {
-                download: true,
-                header: true,
-                skipEmptyLines: true,
-                // Keeps Chinese headers and Emojis intact, just removes surrounding spaces
-                transformHeader: function(h) { 
-                    return h.trim().toLowerCase(); 
-                },
-                complete: function(results) {
-                    allRecords = results.data.filter(r => r.name);
-                    initUI();
+            try {
+                const response = await fetch(CSV_URL);
+                const csvText = await response.text();
+                allRecords = parseCSV(csvText);
+                initUI();
+            } catch (e) {
+                document.getElementById('loading').innerText = "Error: Check Sheet Sharing Settings";
+            }
+        }
+
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            // Clean headers: trim spaces and handle quotes
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+            
+            return lines.slice(1).map(line => {
+                const values = []; let current = '', inQuotes = false;
+                for (let char of line) {
+                    if (char === '"') inQuotes = !inQuotes;
+                    else if (char === ',' && !inQuotes) { 
+                        values.push(current.trim()); 
+                        current = ''; 
+                    }
+                    else current += char;
                 }
-            });
+                values.push(current.trim());
+                
+                let obj = {}; 
+                headers.forEach((h, i) => {
+                    // Match column name even if it has a space like "region "
+                    const cleanHeader = h.trim();
+                    obj[cleanHeader] = values[i]?.replace(/"/g, '') || "";
+                });
+                return obj;
+            }).filter(r => r.name); // Ensure the row has a name
         }
 
         function initUI() {
-            document.getElementById('loading')?.remove();
+            const loader = document.getElementById('loading');
+            if(loader) loader.remove();
+
             ['region', 'category', 'pricing', 'rating'].forEach(f => {
-                // Sorting Chinese text naturally
-                const values = [...new Set(allRecords.map(r => r[f]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+                const values = [...new Set(allRecords.map(r => r[f]).filter(Boolean))].sort();
                 createCheckboxFilters(f, f + 'Section', values);
             });
             renderCards(allRecords);
@@ -106,7 +124,7 @@
             container.innerHTML = "";
             values.forEach(val => {
                 const label = document.createElement('label');
-                label.className = "flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-xs cursor-pointer border border-slate-100 hover:bg-blue-50";
+                label.className = "flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-xs cursor-pointer border border-slate-100";
                 label.innerHTML = `<input type="checkbox" value="${val}" class="filter-checkbox" onchange="syncFilterState('${field}', this)"> ${val}`;
                 container.appendChild(label);
             });
@@ -145,18 +163,18 @@
         function renderCards(data) {
             const grid = document.getElementById('cardGrid');
             document.getElementById('resultCount').innerText = `${data.length} Results`;
-            if(!data.length) { grid.innerHTML = `<div class="py-10 opacity-50 text-center text-sm">找不到相關記錄 No records found.</div>`; return; }
+            if(!data.length) { grid.innerHTML = `<div class="py-10 opacity-50 text-center text-sm">No records found.</div>`; return; }
             grid.innerHTML = data.map(item => `
                 <div class="card">
-                    <div class="rating-badge">${item.rating || '★'}</div>
+                    <div class="rating-badge">${item.rating}</div>
                     <div class="flex flex-wrap gap-1 mb-1 pr-12">
-                        <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold">${item.region || ''}</span>
-                        <span class="text-[10px] bg-blue-50 text-blue-500 px-2 py-0.5 rounded font-bold">${item.category || ''}</span>
+                        <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase font-bold">${item.region}</span>
+                        <span class="text-[10px] bg-blue-50 text-blue-500 px-2 py-0.5 rounded uppercase font-bold">${item.category}</span>
                     </div>
                     <h3 class="text-lg font-bold text-gray-800 leading-tight mb-3 pr-10">${item.name}</h3>
                     <div class="mt-auto flex justify-between items-center gap-4 border-t border-dashed border-gray-100 pt-3">
-                        <span class="text-green-500 font-bold text-base">${item.pricing || ''}</span>
-                        <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-6 py-2 rounded-full text-xs font-bold active:scale-95 transition-transform shadow-sm">查看 VIEW</a>
+                        <span class="text-green-500 font-bold text-base">${item.pricing}</span>
+                        <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-6 py-2 rounded-full text-xs font-bold active:scale-95 transition-transform">VIEW</a>
                     </div>
                 </div>
             `).join('');
