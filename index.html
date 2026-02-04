@@ -15,7 +15,6 @@
         body { background-color: #f8fafc; color: #334155; }
         .card-grid { display: flex; flex-direction: column; gap: 12px; max-width: 500px; margin: 0 auto; }
         
-        /* Updated Card for Left Thumbnail */
         .card { 
             position: relative; width: 100%; background: white; border-radius: 18px; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; 
@@ -23,18 +22,18 @@
         }
 
         .emoji-thumbnail {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             min-width: 60px;
             height: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f1f5f9;
+            background: #f8fafc;
             border-radius: 14px;
+            border: 1px solid #f1f5f9;
         }
 
         .card-content { flex-grow: 1; min-width: 0; }
-        
         .rating-badge { position: absolute; top: 12px; right: 12px; font-weight: 700; font-size: 0.85rem; color: #fbbf24; }
         
         #filterDrawer { transition: all 0.3s ease-in-out; max-height: 0; overflow: hidden; opacity: 0; }
@@ -60,7 +59,7 @@
         <div id="filterDrawer" class="bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto text-left">
             <div class="py-2">
                 <div class="flex justify-between items-center border-b pb-2 mb-1">
-                    <span id="resultCount" class="text-[10px] text-gray-400 font-bold uppercase">Loading...</span>
+                    <span id="resultCount" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Loading...</span>
                     <button onclick="clearAllFilters()" class="text-xs text-red-400 font-bold">Clear All</button>
                 </div>
                 
@@ -76,7 +75,7 @@
                 <div class="collapsible-header" onclick="toggleSection('ratingSection')">Rating ⭐ <i class="fas fa-chevron-down text-xs"></i></div>
                 <div id="ratingSection" class="hidden py-3 flex flex-wrap gap-2"></div>
 
-                <button onclick="applyAll()" class="w-full mt-4 mb-2 bg-blue-400 text-white py-2 rounded-xl font-bold shadow-md">Apply Filters</button>
+                <button onclick="applyAll()" class="w-full mt-4 mb-2 bg-blue-400 text-white py-2 rounded-xl font-bold shadow-md active:scale-95 transition-transform">Apply Filters</button>
             </div>
         </div>
     </div>
@@ -115,7 +114,7 @@
                     else current += char;
                 }
                 values.push(current.trim());
-                let obj = {}; headers.forEach((h, i) => obj[h.trim()] = values[i]?.replace(/"/g, '') || "");
+                let obj = {}; headers.forEach((h, i) => obj[h] = values[i]?.replace(/"/g, '') || "");
                 return obj;
             }).filter(r => r.name);
         }
@@ -166,8 +165,11 @@
                 const mRat = !activeFilters.rating.length || activeFilters.rating.includes(r.rating);
                 return mName && mReg && mCat && mPri && mRat;
             });
+            
             renderCards(filtered);
-            if (window.innerWidth < 768) document.getElementById('filterDrawer').classList.remove('open');
+            
+            // AUTO COLLAPSE: Remove the 'open' class after applying filters
+            document.getElementById('filterDrawer').classList.remove('open');
         }
 
         function renderCards(data) {
@@ -176,10 +178,10 @@
             if(!data.length) { grid.innerHTML = `<div class="py-10 opacity-50 text-center text-sm">No records found.</div>`; return; }
             
             grid.innerHTML = data.map(item => {
-                // EMOJI LOGIC: Extract first character for thumbnail, rest for tag
                 const catStr = item.category || "";
-                const emoji = Array.from(catStr)[0] || "🍴";
-                const catName = Array.from(catStr).slice(1).join("");
+                const chars = Array.from(catStr);
+                const emoji = chars.length > 0 ? chars[0] : "🍴";
+                const catName = chars.length > 1 ? chars.slice(1).join("") : catStr;
 
                 return `
                 <div class="card">
@@ -187,13 +189,13 @@
                     <div class="card-content">
                         <div class="rating-badge">★${item.rating}</div>
                         <div class="flex flex-wrap gap-1 mb-1 pr-12">
-                            <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase font-bold">${item.region}</span>
-                            <span class="text-[10px] bg-blue-50 text-blue-500 px-2 py-0.5 rounded uppercase font-bold">${catName}</span>
+                            <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase font-bold tracking-tight">${item.region}</span>
+                            <span class="text-[10px] bg-blue-50 text-blue-500 px-2 py-0.5 rounded uppercase font-bold tracking-tight">${catName}</span>
                         </div>
-                        <h3 class="text-base font-bold text-gray-800 leading-tight mb-2">${item.name}</h3>
+                        <h3 class="text-base font-bold text-gray-800 leading-tight mb-2 pr-4">${item.name}</h3>
                         <div class="flex justify-between items-center gap-4 border-t border-dashed border-gray-100 pt-2">
-                            <span class="text-green-500 font-bold text-sm">${item.pricing}</span>
-                            <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-5 py-1.5 rounded-full text-xs font-bold shadow-sm">VIEW</a>
+                            <span class="text-green-600 font-bold text-sm">${item.pricing}</span>
+                            <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-5 py-1.5 rounded-full text-xs font-bold shadow-sm active:scale-95 transition-transform">VIEW</a>
                         </div>
                     </div>
                 </div>`;
