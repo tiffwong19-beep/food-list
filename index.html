@@ -22,15 +22,9 @@
         }
 
         .emoji-thumbnail {
-            font-size: 2.2rem;
-            min-width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            border-radius: 14px;
-            border: 1px solid #f1f5f9;
+            font-size: 2.2rem; min-width: 60px; height: 60px;
+            display: flex; align-items: center; justify-content: center;
+            background: #f8fafc; border-radius: 14px; border: 1px solid #f1f5f9;
         }
 
         .card-content { flex-grow: 1; min-width: 0; }
@@ -42,9 +36,8 @@
         .collapsible-header { cursor: pointer; display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 700; }
         input[type="checkbox"] { accent-color: #60a5fa; width: 18px; height: 18px; }
 
-        /* Clear Search Button Styling */
+        /* Hidden by default, shown via JS */
         #clearSearch { display: none; }
-        #searchInput:not(:placeholder-shown) + #clearSearch { display: block; }
     </style>
 </head>
 <body class="p-4 pb-12">
@@ -55,13 +48,15 @@
         <div class="flex items-center gap-2 max-w-md mx-auto">
             <div class="relative flex-grow">
                 <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
-                <input type="text" id="searchInput" placeholder="搜尋名稱 Search..." class="w-full pl-9 pr-10 py-2 rounded-full border border-gray-200 focus:outline-none bg-white text-sm">
-                <!-- X Button to Clear Input -->
-                <button id="clearSearch" onclick="resetSearch()" class="absolute right-3 top-2 text-gray-400 hover:text-gray-600 focus:outline-none p-1">
-                    <i class="fas fa-times-circle"></i>
+                <input type="text" id="searchInput" placeholder="搜尋名稱 Search..." 
+                       oninput="toggleClearBtn()"
+                       class="w-full pl-9 pr-10 py-2 rounded-full border border-gray-200 focus:outline-none bg-white text-sm">
+                <!-- Manual trigger for Clear -->
+                <button id="clearSearch" onclick="resetSearch()" class="absolute right-3 top-2.5 text-gray-400 hover:text-blue-400 p-0.5">
+                    <i class="fas fa-times-circle text-lg"></i>
                 </button>
             </div>
-            <button id="filterBtn" class="bg-white border border-gray-200 py-2 px-4 rounded-full text-blue-400 font-bold text-sm shadow-sm">Filter</button>
+            <button id="filterBtn" onclick="toggleFilterDrawer()" class="bg-white border border-gray-200 py-2 px-4 rounded-full text-blue-400 font-bold text-sm shadow-sm">Filter</button>
         </div>
 
         <div id="filterDrawer" class="bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto text-left">
@@ -152,25 +147,36 @@
             else activeFilters[field] = activeFilters[field].filter(v => v !== checkbox.value);
         }
 
-        function clearAllFilters() {
-            activeFilters = { region: [], category: [], pricing: [], rating: [] };
-            resetSearch();
-            document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = false);
-            applyAll();
+        function toggleClearBtn() {
+            const input = document.getElementById('searchInput');
+            const btn = document.getElementById('clearSearch');
+            btn.style.display = input.value.length > 0 ? 'block' : 'none';
+            applyAll('instant');
         }
 
         function resetSearch() {
             const input = document.getElementById('searchInput');
             input.value = '';
+            toggleClearBtn();
             input.focus();
             applyAll();
         }
 
-        document.getElementById('searchInput').addEventListener('input', applyAll);
-        document.getElementById('filterBtn').onclick = () => document.getElementById('filterDrawer').classList.toggle('open');
-        function toggleSection(id) { document.getElementById(id).classList.toggle('hidden'); }
+        function clearAllFilters() {
+            activeFilters = { region: [], category: [], pricing: [], rating: [] };
+            document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = false);
+            resetSearch();
+        }
 
-        function applyAll() {
+        function toggleFilterDrawer() {
+            document.getElementById('filterDrawer').classList.toggle('open');
+        }
+
+        function toggleSection(id) { 
+            document.getElementById(id).classList.toggle('hidden'); 
+        }
+
+        function applyAll(mode) {
             const term = document.getElementById('searchInput').value.toLowerCase();
             const filtered = allRecords.filter(r => {
                 const mName = (r.name || "").toLowerCase().includes(term);
@@ -182,7 +188,7 @@
             });
             
             renderCards(filtered);
-            if (event && event.type === 'click' && event.target.id !== 'clearSearch') {
+            if (mode !== 'instant') {
                 document.getElementById('filterDrawer').classList.remove('open');
             }
         }
@@ -210,7 +216,7 @@
                         <h3 class="text-base font-bold text-gray-800 leading-tight mb-2 pr-4">${item.name}</h3>
                         <div class="flex justify-between items-center gap-4 border-t border-dashed border-gray-100 pt-2">
                             <span class="text-green-600 font-bold text-sm">${item.pricing}</span>
-                            <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-5 py-1.5 rounded-full text-xs font-bold shadow-sm active:scale-95 transition-transform">VIEW</a>
+                            <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-5 py-1.5 rounded-full text-xs font-bold shadow-sm">VIEW</a>
                         </div>
                     </div>
                 </div>`;
