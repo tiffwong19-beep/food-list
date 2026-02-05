@@ -63,7 +63,7 @@
                 <!-- Column 2: Direction Toggle -->
                 <div class="flex items-center justify-center">
                     <button onclick="toggleDirection()" class="flex items-center gap-2 bg-blue-50 text-blue-500 py-3 px-6 rounded-2xl font-bold text-sm active:scale-95 transition-all">
-                        <span id="dirText">Descending</span>
+                        <span id="dirText">⬆️</span>
                         <i id="dirIcon" class="fas fa-arrow-down"></i>
                     </button>
                 </div>
@@ -163,7 +163,7 @@
                 btn.className = `text-left py-2 px-4 rounded-xl text-sm font-bold transition-all ${currentSort === t ? 'sort-active' : 'text-gray-400 hover:text-gray-600'}`;
             });
             // Direction Label
-            document.getElementById('dirText').innerText = isDescending ? 'Descending' : 'Ascending';
+            document.getElementById('dirText').innerText = isDescending ? '⬆️' : '⬇️';
             document.getElementById('dirIcon').className = `fas fa-arrow-${isDescending ? 'down' : 'up'}`;
         }
 
