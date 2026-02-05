@@ -47,8 +47,8 @@
                 <button id="clearSearch" onclick="resetSearch()" class="hidden absolute right-2 top-2 text-gray-300"><i class="fas fa-times-circle text-sm"></i></button>
             </div>
             
-            <button onclick="toggleDrawer('sortDrawer')" class="liquid-btn">Sort</button>
-            <button onclick="toggleDrawer('filterDrawer')" class="liquid-btn">Filter</button>
+            <button onclick="toggleDrawer('sortDrawer')" class="flex items-center gap-2 bg-blue-50 text-blue-500 py-3 px-5 rounded-2xl font-bold text-sm active:scale-95 transition-all">↕</button>
+            <button onclick="toggleDrawer('filterDrawer')" class="flex items-center gap-2 bg-blue-50 text-blue-500 py-3 px-5 rounded-2xl font-bold text-sm active:scale-95 transition-all">☰</button>
         </div>
 
         <!-- SORT DRAWER (2-Column Grid) -->
@@ -64,7 +64,7 @@
                 <div class="flex items-center justify-center">
                     <button onclick="toggleDirection()" class="flex items-center gap-2 bg-blue-50 text-blue-500 py-3 px-6 rounded-2xl font-bold text-sm active:scale-95 transition-all">
                         <span id="dirText">⬆️</span>
-                        <i id="dirIcon" class="fas fa-arrow-down"></i>
+                        //<i id="dirIcon" class="fas fa-arrow-down"></i>
                     </button>
                 </div>
             </div>
@@ -96,7 +96,7 @@
         
         let currentSort = 'name'; 
         let isDescending = true; 
-        const RATING_ORDER = ['⭐️⭐️⭐️', '⭐️⭐️', '⭐️', '👍🏻', '🤌🏻想食', '🤢'];
+        const RATING_ORDER = ['🤢', '🤌🏻想食', '👍🏻', '⭐️', '⭐️⭐️', '⭐️⭐️⭐️'];
 
         async function loadData() {
             try {
@@ -164,7 +164,7 @@
             });
             // Direction Label
             document.getElementById('dirText').innerText = isDescending ? '⬆️' : '⬇️';
-            document.getElementById('dirIcon').className = `fas fa-arrow-${isDescending ? 'down' : 'up'}`;
+            //document.getElementById('dirIcon').className = `fas fa-arrow-${isDescending ? 'down' : 'up'}`;
         }
 
         function syncFilterState(field, checkbox) {
