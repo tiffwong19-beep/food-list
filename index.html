@@ -22,12 +22,15 @@
             background: #f8fafc; border-radius: 14px; border: 1px solid #f1f5f9;
         }
         .rating-badge { position: absolute; top: 12px; right: 12px; font-weight: 700; font-size: 0.85rem; }
-        #filterDrawer { transition: all 0.3s ease-in-out; max-height: 0; overflow: hidden; opacity: 0; }
-        #filterDrawer.open { max-height: 2000px; opacity: 1; margin-bottom: 1rem; }
+        
+        /* Drawer Styles */
+        .drawer-content { transition: all 0.3s ease-in-out; max-height: 0; overflow: hidden; opacity: 0; }
+        .drawer-content.open { max-height: 2000px; opacity: 1; margin-bottom: 1rem; }
+        
         .collapsible-header { cursor: pointer; display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 700; }
         
-        /* Compact Header Styles */
-        .header-btn { @apply bg-white border border-gray-200 py-2 px-3 rounded-full text-blue-400 font-bold text-xs shadow-sm whitespace-nowrap active:scale-95 transition-transform flex items-center gap-1; }
+        /* Pill Buttons */
+        .pill-btn { @apply bg-white border border-gray-200 py-2 px-4 rounded-full text-blue-400 font-bold text-xs shadow-sm active:scale-95 transition-transform whitespace-nowrap; }
     </style>
 </head>
 <body class="p-3 pb-12">
@@ -35,47 +38,47 @@
     <div class="sticky top-0 bg-slate-50/95 backdrop-blur-md z-50 pb-3">
         <h1 class="text-2xl text-blue-400 mb-3 font-bold text-center">Bulu's Food Hunt</h1>
         
-        <!-- ONE ROW NAVIGATION -->
+        <!-- COMPACT ONE ROW -->
         <div class="flex items-center gap-1.5 max-w-md mx-auto">
-            <!-- Compact Search -->
             <div class="relative flex-grow min-w-0">
-                <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-400 text-[10px]"></i>
+                <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-[10px]"></i>
                 <input type="text" id="searchInput" placeholder="Search..." oninput="handleSearchInput()"
-                       class="w-full pl-7 pr-7 py-2 rounded-full border border-gray-200 focus:outline-none bg-white text-xs">
+                       class="w-full pl-8 pr-8 py-2 rounded-full border border-gray-200 focus:outline-none bg-white text-xs">
                 <button id="clearSearch" onclick="resetSearch()" class="hidden absolute right-2 top-2 text-gray-300"><i class="fas fa-times-circle text-sm"></i></button>
             </div>
             
-            <!-- Sort Toggle Button -->
-            <button onclick="cycleSort()" class="header-btn">
-                Sort <span id="sortLabel" class="text-[10px] text-gray-400">Name</span>
-            </button>
-
-            <!-- Price Toggle Button -->
-            <button onclick="togglePriceSort()" class="header-btn">
-                Price <i id="priceArrow" class="fas fa-arrow-down text-[10px]"></i>
-            </button>
-
-            <!-- Filter Button -->
-            <button onclick="toggleFilterDrawer()" class="header-btn">Filter</button>
+            <button onclick="toggleDrawer('sortDrawer')" class="pill-btn">Sort</button>
+            <button onclick="toggleDrawer('filterDrawer')" class="pill-btn">Filter</button>
         </div>
 
-        <!-- Filter Drawer -->
-        <div id="filterDrawer" class="bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto text-left">
+        <!-- SORT DRAWER -->
+        <div id="sortDrawer" class="drawer-content bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto text-left">
+            <div class="py-4 space-y-4">
+                <div class="flex flex-col gap-2">
+                    <button onclick="setSort('name')" class="flex justify-between items-center text-sm font-bold text-gray-600 border-b pb-2">Alphabetical Name (A-Z) <i id="nameCheck" class="fas fa-check text-blue-400 opacity-0"></i></button>
+                    <button onclick="setSort('rating')" class="flex justify-between items-center text-sm font-bold text-gray-600 border-b pb-2">Rating (Highest to Lowest) <i id="ratingCheck" class="fas fa-check text-blue-400 opacity-0"></i></button>
+                    <button onclick="setPriceSort('desc')" class="flex justify-between items-center text-sm font-bold text-gray-600 border-b pb-2">Price High to Low ↓ <i id="priceDescCheck" class="fas fa-check text-blue-400 opacity-0"></i></button>
+                    <button onclick="setPriceSort('asc')" class="flex justify-between items-center text-sm font-bold text-gray-600 border-b pb-2">Price Low to High ↑ <i id="priceAscCheck" class="fas fa-check text-blue-400 opacity-0"></i></button>
+                </div>
+                <button onclick="applyAll()" class="w-full bg-blue-400 text-white py-2 rounded-xl font-bold">Apply Sort</button>
+            </div>
+        </div>
+
+        <!-- FILTER DRAWER -->
+        <div id="filterDrawer" class="drawer-content bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto text-left">
             <div class="py-2">
                 <div class="flex justify-between items-center border-b pb-2 mb-1">
-                    <span id="resultCount" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Loading...</span>
+                    <span id="resultCount" class="text-[10px] text-gray-400 font-bold uppercase">Loading...</span>
                     <button onclick="clearAllFilters()" class="text-xs text-red-400 font-bold">Reset</button>
                 </div>
-                <div id="filterSections">
-                    <!-- Sections generated via JS -->
-                </div>
-                <button onclick="applyAll()" class="w-full mt-4 mb-2 bg-blue-400 text-white py-2 rounded-xl font-bold shadow-md">Apply Filters</button>
+                <div id="filterSections"></div>
+                <button onclick="applyAll()" class="w-full mt-4 mb-2 bg-blue-400 text-white py-2 rounded-xl font-bold">Apply Filters</button>
             </div>
         </div>
     </div>
 
     <div id="cardGrid" class="card-grid">
-        <div id="loading" class="w-full text-center py-20 text-blue-300 italic">Hunting...</div>
+        <div id="loading" class="w-full text-center py-20 text-blue-300 italic font-bold">Hunting...</div>
     </div>
 
     <script>
@@ -85,11 +88,8 @@
         let allRecords = [];
         let activeFilters = { region: [], category: [], pricing: [], rating: [] };
         
-        // Sorting State
-        let currentSort = 'name'; // 'name' or 'rating'
-        let priceOrder = 'desc'; // 'desc' (high to low) or 'asc' (low to high)
-        
-        // CUSTOM RATING ORDER
+        let currentSort = 'name'; 
+        let priceOrder = 'desc'; 
         const RATING_ORDER = ['⭐️⭐️⭐️', '⭐️⭐️', '⭐️', '👍🏻', '🤌🏻想食', '🤢'];
 
         async function loadData() {
@@ -121,42 +121,31 @@
             document.getElementById('loading')?.remove();
             const filterContainer = document.getElementById('filterSections');
             filterContainer.innerHTML = '';
-
-            const sections = [
-                {id: 'region', label: 'Region 📍'},
-                {id: 'category', label: 'Category 🍱'},
-                {id: 'pricing', label: 'Pricing 💰'},
-                {id: 'rating', label: 'Rating ⭐'}
-            ];
-
+            const sections = [{id:'region', l:'Region 📍'}, {id:'category', l:'Category 🍱'}, {id:'pricing', l:'Pricing 💰'}, {id:'rating', l:'Rating ⭐'}];
             sections.forEach(s => {
                 const values = [...new Set(allRecords.map(r => r[s.id]).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'zh-Hant-HK'));
-                
-                filterContainer.innerHTML += `
-                    <div class="collapsible-header" onclick="toggleSection('${s.id}Section')">${s.label} <i class="fas fa-chevron-down text-xs"></i></div>
-                    <div id="${s.id}Section" class="hidden py-3 flex flex-wrap gap-2">
-                        ${values.map(val => `
-                            <label class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-xs cursor-pointer border border-slate-100">
-                                <input type="checkbox" value="${val}" class="filter-checkbox" onchange="syncFilterState('${s.id}', this)"> ${val}
-                            </label>
-                        `).join('')}
-                    </div>
-                `;
+                filterContainer.innerHTML += `<div class="collapsible-header" onclick="toggleSection('${s.id}Section')">${s.l} <i class="fas fa-chevron-down text-xs"></i></div><div id="${s.id}Section" class="hidden py-3 flex flex-wrap gap-2">${values.map(val => `<label class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-xs border border-slate-100"><input type="checkbox" value="${val}" class="filter-checkbox" onchange="syncFilterState('${s.id}', this)"> ${val}</label>`).join('')}</div>`;
             });
+            updateSortCheckmarks();
             applyAll('instant');
         }
 
-        function cycleSort() {
-            currentSort = (currentSort === 'name') ? 'rating' : 'name';
-            document.getElementById('sortLabel').innerText = currentSort === 'name' ? 'Name' : 'Rating';
-            applyAll('instant');
+        function toggleDrawer(id) {
+            const drawers = ['sortDrawer', 'filterDrawer'];
+            drawers.forEach(d => {
+                if(d === id) document.getElementById(d).classList.toggle('open');
+                else document.getElementById(d).classList.remove('open');
+            });
         }
 
-        function togglePriceSort() {
-            currentSort = 'price';
-            priceOrder = (priceOrder === 'desc') ? 'asc' : 'desc';
-            document.getElementById('priceArrow').className = `fas fa-arrow-${priceOrder === 'desc' ? 'down' : 'up'} text-[10px]`;
-            applyAll('instant');
+        function setSort(type) { currentSort = type; updateSortCheckmarks(); }
+        function setPriceSort(order) { currentSort = 'price'; priceOrder = order; updateSortCheckmarks(); }
+
+        function updateSortCheckmarks() {
+            ['nameCheck', 'ratingCheck', 'priceDescCheck', 'priceAscCheck'].forEach(id => document.getElementById(id).classList.add('opacity-0'));
+            if(currentSort === 'name') document.getElementById('nameCheck').classList.remove('opacity-0');
+            else if(currentSort === 'rating') document.getElementById('ratingCheck').classList.remove('opacity-0');
+            else if(currentSort === 'price') document.getElementById(priceOrder === 'desc' ? 'priceDescCheck' : 'priceAscCheck').classList.remove('opacity-0');
         }
 
         function syncFilterState(field, checkbox) {
@@ -165,17 +154,11 @@
         }
 
         function handleSearchInput() {
-            const input = document.getElementById('searchInput');
-            document.getElementById('clearSearch').style.display = input.value.length > 0 ? 'block' : 'none';
+            document.getElementById('clearSearch').style.display = document.getElementById('searchInput').value.length > 0 ? 'block' : 'none';
             applyAll('instant');
         }
 
-        function resetSearch() {
-            const input = document.getElementById('searchInput');
-            input.value = '';
-            handleSearchInput();
-            input.focus();
-        }
+        function resetSearch() { document.getElementById('searchInput').value = ''; handleSearchInput(); document.getElementById('searchInput').focus(); }
 
         function clearAllFilters() {
             activeFilters = { region: [], category: [], pricing: [], rating: [] };
@@ -183,7 +166,6 @@
             applyAll();
         }
 
-        function toggleFilterDrawer() { document.getElementById('filterDrawer').classList.toggle('open'); }
         function toggleSection(id) { document.getElementById(id).classList.toggle('hidden'); }
 
         function applyAll(mode) {
@@ -197,39 +179,33 @@
                 return mName && mReg && mCat && mPri && mRat;
             });
 
-            // SORTING
             filtered.sort((a, b) => {
                 if (currentSort === 'name') return a.name.localeCompare(b.name, 'zh-Hant-HK', { numeric: true });
-                if (currentSort === 'rating') {
-                    return RATING_ORDER.indexOf(a.rating) - RATING_ORDER.indexOf(b.rating);
-                }
+                if (currentSort === 'rating') return RATING_ORDER.indexOf(a.rating) - RATING_ORDER.indexOf(b.rating);
                 if (currentSort === 'price') {
-                    // Logic based on string length (assuming $$$ is more than $)
                     const diff = (b.pricing || "").length - (a.pricing || "").length;
                     return priceOrder === 'desc' ? diff : -diff;
                 }
             });
 
             renderCards(filtered);
-            if (mode !== 'instant') document.getElementById('filterDrawer').classList.remove('open');
+            if (mode !== 'instant') { document.getElementById('sortDrawer').classList.remove('open'); document.getElementById('filterDrawer').classList.remove('open'); }
         }
 
         function renderCards(data) {
             const grid = document.getElementById('cardGrid');
             document.getElementById('resultCount').innerText = `${data.length} Results`;
-            if(!data.length) { grid.innerHTML = `<div class="py-10 opacity-50 text-center text-sm italic">No records found.</div>`; return; }
+            if(!data.length) { grid.innerHTML = `<div class="py-10 opacity-50 text-center text-sm italic">No records.</div>`; return; }
             grid.innerHTML = data.map(item => {
                 const chars = Array.from(item.category || "");
-                const emoji = chars.length > 0 ? chars[0] : "🍴";
-                const catName = chars.slice(1).join("");
                 return `
                 <div class="card">
-                    <div class="emoji-thumbnail">${emoji}</div>
-                    <div class="flex-grow min-w-0">
+                    <div class="emoji-thumbnail">${chars[0] || "🍴"}</div>
+                    <div class="card-content">
                         <div class="rating-badge">${item.rating}</div>
-                        <div class="flex flex-wrap gap-1 mb-1 pr-12">
-                            <span class="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase font-bold">${item.region}</span>
-                            <span class="text-[9px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded uppercase font-bold">${catName}</span>
+                        <div class="flex flex-wrap gap-1 mb-1 pr-12 text-[9px] font-bold">
+                            <span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase">${item.region}</span>
+                            <span class="bg-blue-50 text-blue-400 px-1.5 py-0.5 rounded uppercase">${chars.slice(1).join("")}</span>
                         </div>
                         <h3 class="text-base font-bold text-gray-800 leading-tight mb-2 pr-4">${item.name}</h3>
                         <div class="flex justify-between items-center border-t border-dashed border-gray-100 pt-2">
