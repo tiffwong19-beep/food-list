@@ -10,82 +10,72 @@
     <style>
         * { font-family: 'Quicksand', "Microsoft JhengHei", "Heiti TC", sans-serif !important; }
         body { background-color: #f8fafc; color: #334155; }
-        .card-grid { display: flex; flex-direction: column; gap: 12px; max-width: 500px; margin: 0 auto; }
+        .card-grid { display: flex; flex-direction: column; gap: 10px; max-width: 500px; margin: 0 auto; }
         .card { 
             position: relative; width: 100%; background: white; border-radius: 18px; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; 
-            padding: 14px; display: flex; flex-direction: row; gap: 14px; align-items: center;
+            padding: 14px; display: flex; flex-direction: row; gap: 12px; align-items: center;
         }
         .emoji-thumbnail {
-            font-size: 2.2rem; min-width: 60px; height: 60px;
+            font-size: 2rem; min-width: 55px; height: 55px;
             display: flex; align-items: center; justify-content: center;
             background: #f8fafc; border-radius: 14px; border: 1px solid #f1f5f9;
         }
-        .rating-badge { position: absolute; top: 12px; right: 12px; font-weight: 700; font-size: 0.85rem; color: #fbbf24; }
+        .rating-badge { position: absolute; top: 12px; right: 12px; font-weight: 700; font-size: 0.85rem; }
         #filterDrawer { transition: all 0.3s ease-in-out; max-height: 0; overflow: hidden; opacity: 0; }
         #filterDrawer.open { max-height: 2000px; opacity: 1; margin-bottom: 1rem; }
         .collapsible-header { cursor: pointer; display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 700; }
-        select { -webkit-appearance: none; appearance: none; }
+        
+        /* Compact Header Styles */
+        .header-btn { @apply bg-white border border-gray-200 py-2 px-3 rounded-full text-blue-400 font-bold text-xs shadow-sm whitespace-nowrap active:scale-95 transition-transform flex items-center gap-1; }
     </style>
 </head>
-<body class="p-4 pb-12">
+<body class="p-3 pb-12">
 
-    <div class="sticky top-0 bg-slate-50/95 backdrop-blur-md z-50 pb-3 text-center">
-        <h1 class="text-3xl text-blue-400 mb-3 font-bold">Bulu's Food Hunt</h1>
+    <div class="sticky top-0 bg-slate-50/95 backdrop-blur-md z-50 pb-3">
+        <h1 class="text-2xl text-blue-400 mb-3 font-bold text-center">Bulu's Food Hunt</h1>
         
-        <div class="flex flex-col gap-2 max-w-md mx-auto">
-            <!-- Search Bar Row -->
-            <div class="relative flex items-center">
-                <i class="fas fa-search absolute left-3 text-gray-400 text-sm z-10"></i>
-                <input type="text" id="searchInput" placeholder="搜尋 Search..." 
-                       oninput="handleSearchInput()"
-                       class="w-full pl-9 pr-10 py-2 rounded-full border border-gray-200 focus:outline-none bg-white text-sm relative z-0">
-                <button id="clearSearch" onclick="resetSearch()" 
-                        class="hidden absolute right-3 z-20 text-gray-400 hover:text-red-400">
-                    <i class="fas fa-times-circle text-lg"></i>
-                </button>
+        <!-- ONE ROW NAVIGATION -->
+        <div class="flex items-center gap-1.5 max-w-md mx-auto">
+            <!-- Compact Search -->
+            <div class="relative flex-grow min-w-0">
+                <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-400 text-[10px]"></i>
+                <input type="text" id="searchInput" placeholder="Search..." oninput="handleSearchInput()"
+                       class="w-full pl-7 pr-7 py-2 rounded-full border border-gray-200 focus:outline-none bg-white text-xs">
+                <button id="clearSearch" onclick="resetSearch()" class="hidden absolute right-2 top-2 text-gray-300"><i class="fas fa-times-circle text-sm"></i></button>
             </div>
             
-            <!-- Sort & Filter Row -->
-            <div class="flex gap-2">
-                <div class="relative flex-grow">
-                    <select id="sortSelect" onchange="applyAll('instant')" 
-                            class="w-full bg-white border border-gray-200 py-2 px-4 pr-8 rounded-full text-gray-600 font-bold text-sm shadow-sm focus:outline-none">
-                        <option value="name">Sort by Name (A-Z)</option>
-                        <option value="rating">Sort by Rating (High)</option>
-                        <option value="price">Sort by Price (Low)</option>
-                    </select>
-                    <i class="fas fa-sort absolute right-4 top-3 text-blue-400 pointer-events-none text-xs"></i>
-                </div>
-                <button id="filterBtn" onclick="toggleFilterDrawer()" 
-                        class="bg-white border border-gray-200 py-2 px-5 rounded-full text-blue-400 font-bold text-sm shadow-sm active:scale-95 transition-transform">
-                    Filter
-                </button>
-            </div>
+            <!-- Sort Toggle Button -->
+            <button onclick="cycleSort()" class="header-btn">
+                Sort <span id="sortLabel" class="text-[10px] text-gray-400">Name</span>
+            </button>
+
+            <!-- Price Toggle Button -->
+            <button onclick="togglePriceSort()" class="header-btn">
+                Price <i id="priceArrow" class="fas fa-arrow-down text-[10px]"></i>
+            </button>
+
+            <!-- Filter Button -->
+            <button onclick="toggleFilterDrawer()" class="header-btn">Filter</button>
         </div>
 
         <!-- Filter Drawer -->
         <div id="filterDrawer" class="bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto text-left">
             <div class="py-2">
                 <div class="flex justify-between items-center border-b pb-2 mb-1">
-                    <span id="resultCount" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest italic">Loading...</span>
-                    <button onclick="clearAllFilters()" class="text-xs text-red-400 font-bold">Clear All</button>
+                    <span id="resultCount" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Loading...</span>
+                    <button onclick="clearAllFilters()" class="text-xs text-red-400 font-bold">Reset</button>
                 </div>
-                <div class="collapsible-header" onclick="toggleSection('regionSection')">Region 📍 <i class="fas fa-chevron-down text-xs"></i></div>
-                <div id="regionSection" class="hidden py-3 flex flex-wrap gap-2"></div>
-                <div class="collapsible-header" onclick="toggleSection('categorySection')">Category 🍱 <i class="fas fa-chevron-down text-xs"></i></div>
-                <div id="categorySection" class="hidden py-3 flex flex-wrap gap-2 text-sm"></div>
-                <div class="collapsible-header" onclick="toggleSection('pricingSection')">Pricing 💰 <i class="fas fa-chevron-down text-xs"></i></div>
-                <div id="pricingSection" class="hidden py-3 flex flex-wrap gap-2"></div>
-                <div class="collapsible-header" onclick="toggleSection('ratingSection')">Rating ⭐ <i class="fas fa-chevron-down text-xs"></i></div>
-                <div id="ratingSection" class="hidden py-3 flex flex-wrap gap-2"></div>
-                <button onclick="applyAll()" class="w-full mt-4 mb-2 bg-blue-400 text-white py-2 rounded-xl font-bold shadow-md active:scale-95 transition-transform">Apply Filters</button>
+                <div id="filterSections">
+                    <!-- Sections generated via JS -->
+                </div>
+                <button onclick="applyAll()" class="w-full mt-4 mb-2 bg-blue-400 text-white py-2 rounded-xl font-bold shadow-md">Apply Filters</button>
             </div>
         </div>
     </div>
 
     <div id="cardGrid" class="card-grid">
-        <div id="loading" class="w-full text-center py-20 text-blue-300">Hunting...</div>
+        <div id="loading" class="w-full text-center py-20 text-blue-300 italic">Hunting...</div>
     </div>
 
     <script>
@@ -94,6 +84,13 @@
 
         let allRecords = [];
         let activeFilters = { region: [], category: [], pricing: [], rating: [] };
+        
+        // Sorting State
+        let currentSort = 'name'; // 'name' or 'rating'
+        let priceOrder = 'desc'; // 'desc' (high to low) or 'asc' (low to high)
+        
+        // CUSTOM RATING ORDER
+        const RATING_ORDER = ['⭐️⭐️⭐️', '⭐️⭐️', '⭐️', '👍🏻', '🤌🏻想食', '🤢'];
 
         async function loadData() {
             try {
@@ -122,22 +119,44 @@
 
         function initUI() {
             document.getElementById('loading')?.remove();
-            ['region', 'category', 'pricing', 'rating'].forEach(f => {
-                const values = [...new Set(allRecords.map(r => r[f]).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'zh-Hant-HK'));
-                createCheckboxFilters(f, f + 'Section', values);
+            const filterContainer = document.getElementById('filterSections');
+            filterContainer.innerHTML = '';
+
+            const sections = [
+                {id: 'region', label: 'Region 📍'},
+                {id: 'category', label: 'Category 🍱'},
+                {id: 'pricing', label: 'Pricing 💰'},
+                {id: 'rating', label: 'Rating ⭐'}
+            ];
+
+            sections.forEach(s => {
+                const values = [...new Set(allRecords.map(r => r[s.id]).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'zh-Hant-HK'));
+                
+                filterContainer.innerHTML += `
+                    <div class="collapsible-header" onclick="toggleSection('${s.id}Section')">${s.label} <i class="fas fa-chevron-down text-xs"></i></div>
+                    <div id="${s.id}Section" class="hidden py-3 flex flex-wrap gap-2">
+                        ${values.map(val => `
+                            <label class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-xs cursor-pointer border border-slate-100">
+                                <input type="checkbox" value="${val}" class="filter-checkbox" onchange="syncFilterState('${s.id}', this)"> ${val}
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
             });
             applyAll('instant');
         }
 
-        function createCheckboxFilters(field, sectionId, values) {
-            const container = document.getElementById(sectionId);
-            container.innerHTML = "";
-            values.forEach(val => {
-                const label = document.createElement('label');
-                label.className = "flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-xs cursor-pointer border border-slate-100";
-                label.innerHTML = `<input type="checkbox" value="${val}" class="filter-checkbox" onchange="syncFilterState('${field}', this)"> ${val}`;
-                container.appendChild(label);
-            });
+        function cycleSort() {
+            currentSort = (currentSort === 'name') ? 'rating' : 'name';
+            document.getElementById('sortLabel').innerText = currentSort === 'name' ? 'Name' : 'Rating';
+            applyAll('instant');
+        }
+
+        function togglePriceSort() {
+            currentSort = 'price';
+            priceOrder = (priceOrder === 'desc') ? 'asc' : 'desc';
+            document.getElementById('priceArrow').className = `fas fa-arrow-${priceOrder === 'desc' ? 'down' : 'up'} text-[10px]`;
+            applyAll('instant');
         }
 
         function syncFilterState(field, checkbox) {
@@ -147,8 +166,7 @@
 
         function handleSearchInput() {
             const input = document.getElementById('searchInput');
-            const clearBtn = document.getElementById('clearSearch');
-            input.value.length > 0 ? clearBtn.classList.remove('hidden') : clearBtn.classList.add('hidden');
+            document.getElementById('clearSearch').style.display = input.value.length > 0 ? 'block' : 'none';
             applyAll('instant');
         }
 
@@ -170,8 +188,6 @@
 
         function applyAll(mode) {
             const term = document.getElementById('searchInput').value.toLowerCase();
-            const sortBy = document.getElementById('sortSelect').value;
-
             let filtered = allRecords.filter(r => {
                 const mName = (r.name || "").toLowerCase().includes(term);
                 const mReg = !activeFilters.region.length || activeFilters.region.includes(r.region);
@@ -181,12 +197,17 @@
                 return mName && mReg && mCat && mPri && mRat;
             });
 
-            // Sorting logic
+            // SORTING
             filtered.sort((a, b) => {
-                if (sortBy === 'name') return (a.name || "").localeCompare((b.name || ""), 'zh-Hant-HK', { numeric: true });
-                if (sortBy === 'rating') return parseFloat(b.rating || 0) - parseFloat(a.rating || 0);
-                if (sortBy === 'price') return (a.pricing || "").length - (b.pricing || "").length;
-                return 0;
+                if (currentSort === 'name') return a.name.localeCompare(b.name, 'zh-Hant-HK', { numeric: true });
+                if (currentSort === 'rating') {
+                    return RATING_ORDER.indexOf(a.rating) - RATING_ORDER.indexOf(b.rating);
+                }
+                if (currentSort === 'price') {
+                    // Logic based on string length (assuming $$$ is more than $)
+                    const diff = (b.pricing || "").length - (a.pricing || "").length;
+                    return priceOrder === 'desc' ? diff : -diff;
+                }
             });
 
             renderCards(filtered);
@@ -196,8 +217,7 @@
         function renderCards(data) {
             const grid = document.getElementById('cardGrid');
             document.getElementById('resultCount').innerText = `${data.length} Results`;
-            if(!data.length) { grid.innerHTML = `<div class="py-10 opacity-50 text-center text-sm">No records.</div>`; return; }
-            
+            if(!data.length) { grid.innerHTML = `<div class="py-10 opacity-50 text-center text-sm italic">No records found.</div>`; return; }
             grid.innerHTML = data.map(item => {
                 const chars = Array.from(item.category || "");
                 const emoji = chars.length > 0 ? chars[0] : "🍴";
@@ -206,7 +226,7 @@
                 <div class="card">
                     <div class="emoji-thumbnail">${emoji}</div>
                     <div class="flex-grow min-w-0">
-                        <div class="rating-badge">★ ${item.rating}</div>
+                        <div class="rating-badge">${item.rating}</div>
                         <div class="flex flex-wrap gap-1 mb-1 pr-12">
                             <span class="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase font-bold">${item.region}</span>
                             <span class="text-[9px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded uppercase font-bold">${catName}</span>
@@ -214,7 +234,7 @@
                         <h3 class="text-base font-bold text-gray-800 leading-tight mb-2 pr-4">${item.name}</h3>
                         <div class="flex justify-between items-center border-t border-dashed border-gray-100 pt-2">
                             <span class="text-green-600 font-bold text-sm">${item.pricing}</span>
-                            <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-5 py-1.5 rounded-full text-xs font-bold active:scale-95 transition-transform">VIEW</a>
+                            <a href="${item.link || '#'}" target="_blank" class="bg-blue-400 text-white px-5 py-1.5 rounded-full text-xs font-bold active:scale-95 transition-transform shadow-sm">VIEW</a>
                         </div>
                     </div>
                 </div>`;
