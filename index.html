@@ -64,7 +64,6 @@
                 <div class="flex items-center justify-center">
                     <button onclick="toggleDirection()" class="flex items-center gap-2 bg-blue-50 text-blue-500 py-3 px-6 rounded-2xl font-bold text-sm active:scale-95 transition-all">
                         <span id="dirText">⬆️</span>
-                        //<i id="dirIcon" class="fas fa-arrow-down"></i>
                     </button>
                 </div>
             </div>
@@ -97,6 +96,7 @@
         let currentSort = 'name'; 
         let isDescending = true; 
         const RATING_ORDER = ['🤢', '🤌🏻想食', '👍🏻', '⭐️', '⭐️⭐️', '⭐️⭐️⭐️'];
+        const PRICING_ORDER = ['💸<$100','💸💸$100-200','💸💸💸$200-$400','💸💸💸💸$400-800','💸💸💸💸💸$800+'];
 
         async function loadData() {
             try {
@@ -129,8 +129,28 @@
             filterContainer.innerHTML = '';
             const sections = [{id:'region', l:'Region 📍'}, {id:'category', l:'Category 🍱'}, {id:'pricing', l:'Pricing 💰'}, {id:'rating', l:'Rating ⭐'}];
             sections.forEach(s => {
-                const values = [...new Set(allRecords.map(r => r[s.id]).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'zh-Hant-HK'));
-                filterContainer.innerHTML += `<div class="collapsible-header" onclick="toggleSection('${s.id}Section')">${s.l} <i class="fas fa-chevron-down text-xs"></i></div><div id="${s.id}Section" class="hidden py-3 flex flex-wrap gap-2">${values.map(val => `<label class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-xs border border-slate-100"><input type="checkbox" value="${val}" class="filter-checkbox" onchange="syncFilterState('${s.id}', this)"> ${val}</label>`).join('')}</div>`;
+                let values = [...new Set(allRecords.map(r => r[s.id]).filter(Boolean))];
+        
+                // Custom Sort Logic
+                if (s.id === 'pricing') {
+                    values.sort((a, b) => PRICING_ORDER.indexOf(a) - PRICING_ORDER.indexOf(b));
+                } else if (s.id === 'rating') {
+                    values.sort((a, b) => RATING_ORDER.indexOf(a) - RATING_ORDER.indexOf(b));
+                } else {
+                    values.sort((a, b) => a.localeCompare(b, 'zh-Hant-HK'));
+                }
+        
+                filterContainer.innerHTML += `
+                    <div class="collapsible-header" onclick="toggleSection('${s.id}Section')">
+                        ${s.l} <i class="fas fa-chevron-down text-xs"></i>
+                    </div>
+                    <div id="${s.id}Section" class="hidden py-3 flex flex-wrap gap-2">
+                        ${values.map(val => `
+                            <label class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-xs border border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors">
+                                <input type="checkbox" value="${val}" class="filter-checkbox" onchange="syncFilterState('${s.id}', this)"> 
+                                ${val}
+                            </label>`).join('')}
+                    </div>`;
             });
             updateSortUI();
             applyAll('instant');
@@ -202,7 +222,7 @@
                 let res = 0;
                 if (currentSort === 'name') res = a.name.localeCompare(b.name, 'zh-Hant-HK', { numeric: true });
                 else if (currentSort === 'rating') res = RATING_ORDER.indexOf(a.rating) - RATING_ORDER.indexOf(b.rating);
-                else if (currentSort === 'price') res = (a.pricing || "").length - (b.pricing || "").length;
+                else if (currentSort === 'price') res = PRICING_ORDER.indexOf(a.pricing) - PRICING_ORDER.indexOf(b.pricing);
                 
                 return isDescending ? res : -res;
             });
