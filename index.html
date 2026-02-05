@@ -47,23 +47,23 @@
                 <button id="clearSearch" onclick="resetSearch()" class="hidden absolute right-2 top-2 text-gray-300"><i class="fas fa-times-circle text-sm"></i></button>
             </div>
             
-            <button onclick="toggleDrawer('sortDrawer')" class="flex items-center gap-2 bg-blue-100 text-blue-500 py-3 px-5 rounded-2xl font-bold text-sm active:scale-95 transition-all">⇳</button>
-            <button onclick="toggleDrawer('filterDrawer')" class="flex items-center gap-2 bg-blue-100 text-blue-500 py-3 px-5 rounded-2xl font-bold text-sm active:scale-95 transition-all">☰</button>
+            <button onclick="toggleDrawer('sortDrawer')" class="flex items-center gap-2 bg-blue-100 text-blue-500 py-3 px-5 py-1.5 rounded-2xl font-bold text-xl active:scale-95 transition-all">⇳</button>
+            <button onclick="toggleDrawer('filterDrawer')" class="flex items-center gap-2 bg-blue-100 text-blue-500 py-3 px-5 py-1.5 rounded-2xl font-bold text-xl active:scale-95 transition-all">☰</button>
         </div>
 
         <!-- SORT DRAWER (2-Column Grid) -->
         <div id="sortDrawer" class="drawer-content bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto">
-            <div class="py-5 grid grid-cols-2 gap-4">
+            <div class="py-5 grid grid-cols-[1fr_auto] gap-4">
                 <!-- Column 1: Options -->
                 <div class="flex flex-col gap-2 border-r pr-4 border-gray-100">
-                    <button id="btn-name" onclick="setSortType('name')" class="text-left py-2 px-3 rounded-xl text-sm font-bold text-gray-500 transition-colors">Name</button>
-                    <button id="btn-rating" onclick="setSortType('rating')" class="text-left py-2 px-3 rounded-xl text-sm font-bold text-gray-500 transition-colors">Rating</button>
-                    <button id="btn-price" onclick="setSortType('price')" class="text-left py-2 px-3 rounded-xl text-sm font-bold text-gray-500 transition-colors">Price</button>
+                    <button id="btn-name" onclick="setSortType('name')" class="text-left py-2 px-3 rounded-xl text-m font-bold text-gray-500 transition-colors">Name</button>
+                    <button id="btn-rating" onclick="setSortType('rating')" class="text-left py-2 px-3 rounded-xl text-m font-bold text-gray-500 transition-colors">Rating</button>
+                    <button id="btn-price" onclick="setSortType('price')" class="text-left py-2 px-3 rounded-xl text-m font-bold text-gray-500 transition-colors">Price</button>
                 </div>
                 <!-- Column 2: Direction Toggle -->
                 <div class="flex items-center justify-center">
-                    <button onclick="toggleDirection()" class="flex items-center gap-2 bg-blue-50 text-blue-500 py-3 px-6 rounded-2xl font-bold text-sm active:scale-95 transition-all">
-                        <span id="dirText">⬆️</span>
+                    <button onclick="toggleDirection()" class="flex items-center gap-2 bg-gray-50 text-gray-600py-1.5 px-6 rounded-2xl font-bold text-m active:scale-95 transition-all">
+                        <span id="dirText">⬆️Ascending</span>
                     </button>
                 </div>
             </div>
@@ -183,7 +183,7 @@
                 btn.className = `text-left py-2 px-4 rounded-xl text-sm font-bold transition-all ${currentSort === t ? 'sort-active' : 'text-gray-400 hover:text-gray-600'}`;
             });
             // Direction Label
-            document.getElementById('dirText').innerText = isDescending ? '⬆️' : '⬇️';
+            document.getElementById('dirText').innerText = isDescending ? '⬆️Ascending' : '⬇️Descending';
             //document.getElementById('dirIcon').className = `fas fa-arrow-${isDescending ? 'down' : 'up'}`;
         }
 
