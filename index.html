@@ -29,8 +29,9 @@
         
         .collapsible-header { cursor: pointer; display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-weight: 700; }
         
-        /* Pill Buttons */
-        .pill-btn { @apply bg-white border border-gray-200 py-2 px-4 rounded-full text-blue-400 font-bold text-xs shadow-sm active:scale-95 transition-transform whitespace-nowrap; }
+        /* Liquid Pill Buttons */
+        .liquid-btn { @apply bg-white border border-gray-200 py-2 px-5 rounded-full text-blue-400 font-bold text-xs shadow-sm active:scale-90 transition-all hover:bg-blue-50; }
+        .sort-active { @apply bg-blue-400 text-white border-blue-400 shadow-blue-100; }
     </style>
 </head>
 <body class="p-3 pb-12">
@@ -38,8 +39,7 @@
     <div class="sticky top-0 bg-slate-50/95 backdrop-blur-md z-50 pb-3">
         <h1 class="text-2xl text-blue-400 mb-3 font-bold text-center">Bulu's Food Hunt</h1>
         
-        <!-- COMPACT ONE ROW -->
-        <div class="flex items-center gap-1.5 max-w-md mx-auto">
+        <div class="flex items-center gap-2 max-w-md mx-auto">
             <div class="relative flex-grow min-w-0">
                 <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-[10px]"></i>
                 <input type="text" id="searchInput" placeholder="Search..." oninput="handleSearchInput()"
@@ -47,20 +47,26 @@
                 <button id="clearSearch" onclick="resetSearch()" class="hidden absolute right-2 top-2 text-gray-300"><i class="fas fa-times-circle text-sm"></i></button>
             </div>
             
-            <button onclick="toggleDrawer('sortDrawer')" class="pill-btn">Sort</button>
-            <button onclick="toggleDrawer('filterDrawer')" class="pill-btn">Filter</button>
+            <button onclick="toggleDrawer('sortDrawer')" class="liquid-btn">Sort</button>
+            <button onclick="toggleDrawer('filterDrawer')" class="liquid-btn">Filter</button>
         </div>
 
-        <!-- SORT DRAWER -->
-        <div id="sortDrawer" class="drawer-content bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto text-left">
-            <div class="py-4 space-y-4">
-                <div class="flex flex-col gap-2">
-                    <button onclick="setSort('name')" class="flex justify-between items-center text-sm font-bold text-gray-600 border-b pb-2">Alphabetical Name (A-Z) <i id="nameCheck" class="fas fa-check text-blue-400 opacity-0"></i></button>
-                    <button onclick="setSort('rating')" class="flex justify-between items-center text-sm font-bold text-gray-600 border-b pb-2">Rating (Highest to Lowest) <i id="ratingCheck" class="fas fa-check text-blue-400 opacity-0"></i></button>
-                    <button onclick="setPriceSort('desc')" class="flex justify-between items-center text-sm font-bold text-gray-600 border-b pb-2">Price High to Low ↓ <i id="priceDescCheck" class="fas fa-check text-blue-400 opacity-0"></i></button>
-                    <button onclick="setPriceSort('asc')" class="flex justify-between items-center text-sm font-bold text-gray-600 border-b pb-2">Price Low to High ↑ <i id="priceAscCheck" class="fas fa-check text-blue-400 opacity-0"></i></button>
+        <!-- SORT DRAWER (2-Column Grid) -->
+        <div id="sortDrawer" class="drawer-content bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto">
+            <div class="py-5 grid grid-cols-2 gap-4">
+                <!-- Column 1: Options -->
+                <div class="flex flex-col gap-2 border-r pr-4 border-gray-100">
+                    <button id="btn-name" onclick="setSortType('name')" class="text-left py-2 px-3 rounded-xl text-sm font-bold text-gray-500 transition-colors">Name</button>
+                    <button id="btn-rating" onclick="setSortType('rating')" class="text-left py-2 px-3 rounded-xl text-sm font-bold text-gray-500 transition-colors">Rating</button>
+                    <button id="btn-price" onclick="setSortType('price')" class="text-left py-2 px-3 rounded-xl text-sm font-bold text-gray-500 transition-colors">Price</button>
                 </div>
-                <button onclick="applyAll()" class="w-full bg-blue-400 text-white py-2 rounded-xl font-bold">Apply Sort</button>
+                <!-- Column 2: Direction Toggle -->
+                <div class="flex items-center justify-center">
+                    <button onclick="toggleDirection()" class="flex items-center gap-2 bg-blue-50 text-blue-500 py-3 px-6 rounded-2xl font-bold text-sm active:scale-95 transition-all">
+                        <span id="dirText">Descending</span>
+                        <i id="dirIcon" class="fas fa-arrow-down"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -68,11 +74,11 @@
         <div id="filterDrawer" class="drawer-content bg-white mt-3 rounded-2xl px-5 shadow-lg border border-blue-50 max-w-md mx-auto text-left">
             <div class="py-2">
                 <div class="flex justify-between items-center border-b pb-2 mb-1">
-                    <span id="resultCount" class="text-[10px] text-gray-400 font-bold uppercase">Loading...</span>
+                    <span id="resultCount" class="text-[10px] text-gray-400 font-bold uppercase italic">Loading...</span>
                     <button onclick="clearAllFilters()" class="text-xs text-red-400 font-bold">Reset</button>
                 </div>
                 <div id="filterSections"></div>
-                <button onclick="applyAll()" class="w-full mt-4 mb-2 bg-blue-400 text-white py-2 rounded-xl font-bold">Apply Filters</button>
+                <button onclick="applyAll()" class="w-full mt-4 mb-2 bg-blue-400 text-white py-2 rounded-xl font-bold shadow-md active:scale-95 transition-transform">Apply Filters</button>
             </div>
         </div>
     </div>
@@ -89,7 +95,7 @@
         let activeFilters = { region: [], category: [], pricing: [], rating: [] };
         
         let currentSort = 'name'; 
-        let priceOrder = 'desc'; 
+        let isDescending = true; 
         const RATING_ORDER = ['⭐️⭐️⭐️', '⭐️⭐️', '⭐️', '👍🏻', '🤌🏻想食', '🤢'];
 
         async function loadData() {
@@ -126,7 +132,7 @@
                 const values = [...new Set(allRecords.map(r => r[s.id]).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'zh-Hant-HK'));
                 filterContainer.innerHTML += `<div class="collapsible-header" onclick="toggleSection('${s.id}Section')">${s.l} <i class="fas fa-chevron-down text-xs"></i></div><div id="${s.id}Section" class="hidden py-3 flex flex-wrap gap-2">${values.map(val => `<label class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-xs border border-slate-100"><input type="checkbox" value="${val}" class="filter-checkbox" onchange="syncFilterState('${s.id}', this)"> ${val}</label>`).join('')}</div>`;
             });
-            updateSortCheckmarks();
+            updateSortUI();
             applyAll('instant');
         }
 
@@ -138,14 +144,27 @@
             });
         }
 
-        function setSort(type) { currentSort = type; updateSortCheckmarks(); }
-        function setPriceSort(order) { currentSort = 'price'; priceOrder = order; updateSortCheckmarks(); }
+        function setSortType(type) {
+            currentSort = type;
+            updateSortUI();
+            applyAll('instant');
+        }
 
-        function updateSortCheckmarks() {
-            ['nameCheck', 'ratingCheck', 'priceDescCheck', 'priceAscCheck'].forEach(id => document.getElementById(id).classList.add('opacity-0'));
-            if(currentSort === 'name') document.getElementById('nameCheck').classList.remove('opacity-0');
-            else if(currentSort === 'rating') document.getElementById('ratingCheck').classList.remove('opacity-0');
-            else if(currentSort === 'price') document.getElementById(priceOrder === 'desc' ? 'priceDescCheck' : 'priceAscCheck').classList.remove('opacity-0');
+        function toggleDirection() {
+            isDescending = !isDescending;
+            updateSortUI();
+            applyAll('instant');
+        }
+
+        function updateSortUI() {
+            // Highlights
+            ['name', 'rating', 'price'].forEach(t => {
+                const btn = document.getElementById(`btn-${t}`);
+                btn.className = `text-left py-2 px-4 rounded-xl text-sm font-bold transition-all ${currentSort === t ? 'sort-active' : 'text-gray-400 hover:text-gray-600'}`;
+            });
+            // Direction Label
+            document.getElementById('dirText').innerText = isDescending ? 'Descending' : 'Ascending';
+            document.getElementById('dirIcon').className = `fas fa-arrow-${isDescending ? 'down' : 'up'}`;
         }
 
         function syncFilterState(field, checkbox) {
@@ -180,16 +199,16 @@
             });
 
             filtered.sort((a, b) => {
-                if (currentSort === 'name') return a.name.localeCompare(b.name, 'zh-Hant-HK', { numeric: true });
-                if (currentSort === 'rating') return RATING_ORDER.indexOf(a.rating) - RATING_ORDER.indexOf(b.rating);
-                if (currentSort === 'price') {
-                    const diff = (b.pricing || "").length - (a.pricing || "").length;
-                    return priceOrder === 'desc' ? diff : -diff;
-                }
+                let res = 0;
+                if (currentSort === 'name') res = a.name.localeCompare(b.name, 'zh-Hant-HK', { numeric: true });
+                else if (currentSort === 'rating') res = RATING_ORDER.indexOf(a.rating) - RATING_ORDER.indexOf(b.rating);
+                else if (currentSort === 'price') res = (a.pricing || "").length - (b.pricing || "").length;
+                
+                return isDescending ? res : -res;
             });
 
             renderCards(filtered);
-            if (mode !== 'instant') { document.getElementById('sortDrawer').classList.remove('open'); document.getElementById('filterDrawer').classList.remove('open'); }
+            if (mode !== 'instant') document.getElementById('filterDrawer').classList.remove('open');
         }
 
         function renderCards(data) {
