@@ -127,6 +127,10 @@
             document.getElementById('loading')?.remove();
             const filterContainer = document.getElementById('filterSections');
             filterContainer.innerHTML = '';
+            const categoryCounts = allRecords.reduce((acc, r) => {
+                if (r.category) acc[r.category] = (acc[r.category] || 0) + 1;
+                return acc;
+            }, {});
             const sections = [{id:'region', l:'Region 📍'}, {id:'category', l:'Category 🍱'}, {id:'pricing', l:'Pricing 💰'}, {id:'rating', l:'Rating ⭐'}];
             sections.forEach(s => {
                 let values = [...new Set(allRecords.map(r => r[s.id]).filter(Boolean))];
@@ -136,6 +140,9 @@
                     values.sort((a, b) => PRICING_ORDER.indexOf(a) - PRICING_ORDER.indexOf(b));
                 } else if (s.id === 'rating') {
                     values.sort((a, b) => RATING_ORDER.indexOf(a) - RATING_ORDER.indexOf(b));
+                } else if (s.id === 'category') {
+                    // Sort by count (descending), then alphabetically if counts are equal
+                    values.sort((a, b) => (categoryCounts[b] - categoryCounts[a]) || a.localeCompare(b, 'zh-Hant-HK'));
                 } else {
                     values.sort((a, b) => a.localeCompare(b, 'zh-Hant-HK'));
                 }
