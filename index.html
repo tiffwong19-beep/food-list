@@ -127,6 +127,16 @@
             document.getElementById('loading')?.remove();
             const filterContainer = document.getElementById('filterSections');
             filterContainer.innerHTML = '';
+            const categoryStats = allRecords.reduce((acc, r) => {
+                if (r.category) {
+                    if (!acc[r.category]) acc[r.category] = { count: 0, totalRatingIndex: 0 };
+                    acc[r.category].count += 1;
+                    // Get the numerical index of the rating (e.g., ⭐️⭐️⭐️ = 5)
+                    const rIndex = RATING_ORDER.indexOf(r.rating);
+                    acc[r.category].totalRatingIndex += rIndex > -1 ? rIndex : 0;
+                }
+                return acc;
+            }, {});
             const categoryCounts = allRecords.reduce((acc, r) => {
                 if (r.category) acc[r.category] = (acc[r.category] || 0) + 1;
                 return acc;
@@ -141,8 +151,20 @@
                 } else if (s.id === 'rating') {
                     values.sort((a, b) => RATING_ORDER.indexOf(a) - RATING_ORDER.indexOf(b));
                 } else if (s.id === 'category') {
-                    // Sort by count (descending), then alphabetically if counts are equal
-                    values.sort((a, b) => (categoryCounts[b] - categoryCounts[a]) || a.localeCompare(b, 'zh-Hant-HK'));
+                    values.sort((a, b) => {
+                        // 1. Sort by Count (Descending)
+                        const countDiff = categoryStats[b].count - categoryStats[a].count;
+                        if (countDiff !== 0) return countDiff;
+        
+                        // 2. Tie-breaker: Average Rating (Higher index in RATING_ORDER first)
+                        const avgA = categoryStats[a].totalRatingIndex / categoryStats[a].count;
+                        const avgB = categoryStats[b].totalRatingIndex / categoryStats[b].count;
+                        const ratingDiff = avgB - avgA;
+                        if (ratingDiff !== 0) return ratingDiff;
+        
+                        // 3. Final Tie-breaker: Alphabetical Order (A-Z)
+                        return a.localeCompare(b, 'zh-Hant-HK');
+                    });
                 } else {
                     values.sort((a, b) => a.localeCompare(b, 'zh-Hant-HK'));
                 }
